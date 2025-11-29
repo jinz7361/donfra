@@ -4,7 +4,7 @@ services:
   # ===== UI: nginx + 静态 Next 导出站 + 反向代理 =====
   ui:
     build:
-      context: ./donfra-ui 
+      context: ../donfra-ui 
     image: donfra-ui:dev
     # container_name 可以不写，让 compose 自己管理
     container_name: donfra-ui
@@ -19,7 +19,7 @@ services:
   # ===== API: Go 后端 =====
   api:
     build:
-      context: ./donfra-api         # 根据你实际路径改
+      context: ../donfra-api         # 根据你实际路径改
     image: donfra-api:dev
     container_name: donfra-api
     environment:
@@ -38,7 +38,7 @@ services:
   # ===== WS: y-websocket 服务 =====
   ws:
     build:
-      context: ./donfra-ws  
+      context: ../donfra-ws  
     image: donfra-ws:dev
     container_name: donfra-ws
     expose:
