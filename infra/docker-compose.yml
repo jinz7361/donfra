@@ -21,8 +21,6 @@ services:
     image: donfra-ui:dev
     # container_name 可以不写，让 compose 自己管理
     container_name: donfra-ui
-    ports:
-      - "80:80"                      # 浏览器访问 http://localhost
     depends_on:
       - api
       - ws
