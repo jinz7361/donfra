@@ -78,6 +78,7 @@ export default function AdminDashboard() {
       }
     } finally {
       setClosing(false);
+      refreshStatus();
     }
   };
 
