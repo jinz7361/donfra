@@ -168,6 +168,14 @@ export default function CodePad({ onExit }: Props) {
     setConfirmOpen(false);
     await exit(false);
   };
+  // Click handler for Quit button: if multiple peers present, auto-save and quit without prompting.
+  const onQuitClick = async () => {
+    if (peers.length > 1) {
+      await exit(true);
+      return;
+    }
+    setConfirmOpen(true);
+  };
 
   // Monaco onMount：绑定 Yjs + Awareness
   const onMount = useCallback(async (editor: MonacoEditor.IStandaloneCodeEditor, monacoNS: any) => {
@@ -406,7 +414,7 @@ export default function CodePad({ onExit }: Props) {
           <button className="btn run" onClick={run} disabled={running} title="Run (Ctrl/Cmd+Enter)">
             {running ? "Running…" : "Run"}
           </button>
-          <button className="btn danger" onClick={() => setConfirmOpen(true)}>Quit</button>
+          <button className="btn danger" onClick={onQuitClick}>Quit</button>
         </div>
       </div>
 
