@@ -24,17 +24,17 @@ func AdminOnly(authSvc TokenValidator) func(http.Handler) http.Handler {
 				authHeader = strings.TrimSpace(authHeader[7:])
 			}
 			if authHeader == "" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				http.Error(w, "no auth header unauthorized", http.StatusUnauthorized)
 				return
 			}
 			claims, err := authSvc.Validate(authHeader)
 			if err != nil || claims == nil {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
 			subject, err := claims.GetSubject()
 			if err != nil || subject != "admin" {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
 			next.ServeHTTP(w, r)

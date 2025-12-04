@@ -1,3 +1,5 @@
+import "@excalidraw/excalidraw/index.css";
+
 export const metadata = {
   title: "Donfra — British Tactical Elegance",
   description: "Precision. Preparation. Placement.",

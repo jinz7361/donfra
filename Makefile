@@ -35,7 +35,7 @@ localdev-down-api:
 
 localdev-restart-api:
 	@echo "Restarting API container"
-	$(DC) restart api
+	$(DC) stop api && $(DC) up --build -d api
 
 localdev-up-ws:
 	@echo "Starting WS container"
@@ -51,15 +51,14 @@ localdev-restart-ws:
 
 localdev-up-db:
 	@echo "Starting DB container"
-	$(DC) up -d donfra-db
+	$(DC) up -d db
 
 localdev-down-db:
 	@echo "Stopping DB container"
-	$(DC) stop donfra-db
-
+	$(DC) down db -v
 localdev-restart-db:
 	@echo "Restarting DB container"
-	$(DC) restart donfra-db
+	$(DC) down db -v && $(DC) up --build -d db
 
 logs:
 	$(DC) logs -f --tail=200
