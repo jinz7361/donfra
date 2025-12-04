@@ -32,7 +32,7 @@ export default function Home() {
         muted
         playsInline
       >
-        <source src="DB12_Coupe_AmalfiCoast_Desktop_60fps_Shot_01.mp4" type="video/mp4" />
+        <source src="DB12.mp4" type="video/mp4" />
       </video>
         <div className="hero-overlay-grid" />
         <div className="hero-vignette" />

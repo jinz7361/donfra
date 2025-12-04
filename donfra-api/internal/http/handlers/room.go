@@ -1,18 +1,21 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 
 	"donfra-api/internal/domain/auth"
 	"donfra-api/internal/domain/room"
+	"donfra-api/internal/domain/study"
 	"donfra-api/internal/pkg/httputil"
 )
 
 type Handlers struct {
-	roomSvc *room.Service
-	auth    AuthService
+	roomSvc  *room.Service
+	studySvc StudyService
+	auth     AuthService
 }
 
 type AuthService interface {
@@ -20,8 +23,16 @@ type AuthService interface {
 	IssueAdminToken(pass string) (string, error)
 }
 
-func New(roomSvc *room.Service, auth AuthService) *Handlers {
-	return &Handlers{roomSvc: roomSvc, auth: auth}
+type StudyService interface {
+	ListPublishedLessons(ctx context.Context) ([]study.Lesson, error)
+	GetLessonBySlug(ctx context.Context, slug string) (*study.Lesson, error)
+	CreateLesson(ctx context.Context, lesson *study.Lesson) (*study.Lesson, error)
+	UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]interface{}) error
+	DeleteLessonBySlug(ctx context.Context, slug string) error
+}
+
+func New(roomSvc *room.Service, studySvc StudyService, auth AuthService) *Handlers {
+	return &Handlers{roomSvc: roomSvc, studySvc: studySvc, auth: auth}
 }
 
 type initReq struct {

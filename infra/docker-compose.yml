@@ -38,10 +38,13 @@ services:
       - PASSCODE=7777               
       - ADMIN_PASS=7777
       - JWT_SECRET=don-secret
+      - DATABASE_URL=postgres://donfra:arfnod@donfra-db:5432/donfra_study?sslmode=disable
       # - CORS_ORIGIN=http://localhost
       # - BASE_URL=http://localhost
     expose:
       - "8080"                
+    depends_on:
+      - donfra-db
     networks:
       - donfra
 
@@ -58,6 +61,21 @@ services:
     networks:
       - donfra
 
+  donfra-db:
+    image: postgres:16
+    container_name: donfra-db
+    environment:
+      - POSTGRES_USER=donfra
+      - POSTGRES_PASSWORD=arfnod
+      - POSTGRES_DB=donfra_study
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/seed_lessons.sql:/docker-entrypoint-initdb.d/seed_lessons.sql:ro
+    networks:
+      - donfra
+
 networks:
   donfra:
     driver: bridge
@@ -65,3 +83,4 @@ networks:
 volumes:
   caddy_data: {}
   caddy_config: {}
+  pgdata: {}

@@ -25,3 +25,15 @@ logs:
 
 ps:
 	$(DC) ps
+
+restart-ui:
+	@echo "Restarting UI container"
+	$(DC) restart ui
+
+ui-down:
+	@echo "Stopping UI container"
+	$(DC) stop ui
+
+ui-up:
+	@echo "Starting UI container"
+	$(DC) up -d --build ui

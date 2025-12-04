@@ -37,7 +37,7 @@ type Claims struct {
 func (c Claims) GetSubject() (string, error) { return c.Subject, nil }
 
 // IssueAdminToken verifies the provided dashboard password and returns a signed JWT
-// with subject "admin". The token uses HS256 and is valid for 24 hours.
+// with subject "admin". The token uses HS256 and is valid for 5 minutes.
 // The token is entirely stateless; the server later validates it by verifying the
 // signature and standard claims using the same secret key.
 func (s *AuthService) IssueAdminToken(pass string) (string, error) {
@@ -48,7 +48,7 @@ func (s *AuthService) IssueAdminToken(pass string) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "admin",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 			Issuer:    "donfra-api",
 		},
 	}
@@ -59,8 +59,8 @@ func (s *AuthService) IssueAdminToken(pass string) (string, error) {
 // Validate parses the JWT using the shared secret and verifies its signature and standard
 // claims (expiration, etc). It returns the typed Claims if the token is valid.
 // Because tokens are stateless, invalid or expired tokens simply fail verification.
-func (s *AuthService) Validate(tokenStr string) (*Claims, error) {
-	parsed, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+func (s *AuthService) Validate(jwtToken string) (*Claims, error) {
+	parsed, err := jwt.ParseWithClaims(jwtToken, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		return s.secret, nil
 	})
 	if err != nil {
