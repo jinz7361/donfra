@@ -133,9 +133,9 @@ export default function CodePad({ onExit }: Props) {
 
   const exit = async () => {
     // 断开本地协作连接，释放资源
-    try { providerRef.current?.destroy?.(); } catch {}
-    try { bindingRef.current?.destroy?.(); } catch {}
-    try { ydocRef.current?.destroy?.(); } catch {}
+    try { providerRef.current?.destroy?.(); } catch { }
+    try { bindingRef.current?.destroy?.(); } catch { }
+    try { ydocRef.current?.destroy?.(); } catch { }
 
     // 回到上层 / 关闭页面（保持你现有逻辑）
     onExit?.();
@@ -185,7 +185,7 @@ export default function CodePad({ onExit }: Props) {
 
     const pickColor = () => {
       if (role === "master") return { color: "#2aa198", colorLight: "rgba(42,161,152,.25)" }; // teal
-      if (role === "agent")  return { color: "#d33682", colorLight: "rgba(211,54,130,.25)" }; // magenta
+      if (role === "agent") return { color: "#d33682", colorLight: "rgba(211,54,130,.25)" }; // magenta
       const h = Math.floor(Math.random() * 360);
       return { color: `hsl(${h} 70% 55%)`, colorLight: `hsl(${h} 70% 55% / .22)` };
     };
@@ -228,8 +228,8 @@ export default function CodePad({ onExit }: Props) {
     const selFor = (clientId: number) => {
       const headClass = `.yRemoteSelectionHead-${clientId}`;
       const bodyClass = `.yRemoteSelection-${clientId}`;
-      const headAttr  = `.yRemoteSelectionHead[data-clientid="${clientId}"]`;
-      const bodyAttr  = `.yRemoteSelection[data-clientid="${clientId}"]`;
+      const headAttr = `.yRemoteSelectionHead[data-clientid="${clientId}"]`;
+      const bodyAttr = `.yRemoteSelection[data-clientid="${clientId}"]`;
       const root = `.editor-pane .monaco-editor`;
       return {
         head: `${root} ${headClass}, ${root} ${headAttr}`,
@@ -315,7 +315,7 @@ export default function CodePad({ onExit }: Props) {
     const onAwarenessNameChange = () => updateCursorLabels();
     awareness.on("change", onAwarenessNameChange);
     cleanupFnsRef.current.push(() => awareness.off("change", onAwarenessNameChange));
-    cleanupFnsRef.current.push(() => { try { mo?.disconnect(); } catch {} });
+    cleanupFnsRef.current.push(() => { try { mo?.disconnect(); } catch { } });
 
     // 共享输出 Map
     const yOutputs = doc.getMap<any>("outputs");
@@ -338,15 +338,15 @@ export default function CodePad({ onExit }: Props) {
   // 卸载清理
   useEffect(() => {
     return () => {
-      try { cleanupFnsRef.current.forEach((fn) => { try { fn(); } catch {} }); } catch {}
+      try { cleanupFnsRef.current.forEach((fn) => { try { fn(); } catch { } }); } catch { }
       try {
         if (yOutputsRef.current && outputsObserverRef.current) {
           yOutputsRef.current.unobserve(outputsObserverRef.current);
         }
-      } catch {}
-      try { bindingRef.current?.destroy?.(); } catch {}
-      try { providerRef.current?.destroy?.(); } catch {}
-      try { ydocRef.current?.destroy(); } catch {}
+      } catch { }
+      try { bindingRef.current?.destroy?.(); } catch { }
+      try { providerRef.current?.destroy?.(); } catch { }
+      try { ydocRef.current?.destroy(); } catch { }
     };
   }, []);
 
