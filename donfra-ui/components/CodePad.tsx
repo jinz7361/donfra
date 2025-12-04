@@ -29,6 +29,9 @@ export default function CodePad({ onExit }: Props) {
   // 在线协作者列表
   const [peers, setPeers] = useState<Peer[]>([]);
 
+  // 退出确认对话框
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   // 本地 userName（用于标注 runner）
   const userNameRef = useRef<string>("");
 
@@ -118,7 +121,7 @@ export default function CodePad({ onExit }: Props) {
     setStdout("");
     setStderr("");
     setRunBy(userNameRef.current || "Someone");
-    setRunAt(Date.now());
+    setRunAt(null);
     const doc = ydocRef.current as import("yjs").Doc | null;
     const yMap = yOutputsRef.current;
     if (doc && yMap) {
@@ -126,12 +129,27 @@ export default function CodePad({ onExit }: Props) {
         yMap.set("stdout", "");
         yMap.set("stderr", "");
         yMap.set("runner", userNameRef.current || "Someone");
-        yMap.set("ts", Date.now());
+        yMap.set("ts", null);
       });
     }
   }, []);
 
-  const exit = async () => {
+  const resetCodePad = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const model = editor.getModel();
+    if (!model) return;
+    model.setValue("");
+    clearOutput();
+  }, []);
+
+  const exit = async (keep?: boolean) => {
+    // 离开前清理内容（如果没人了）
+    // If `keep` is explicitly false, we will clear; if true, we keep.
+    const willKeep = typeof keep === "boolean" ? keep : true;
+    if (peers.length <= 1 && !willKeep) {
+      resetCodePad();
+    }
     // 断开本地协作连接，释放资源
     try { providerRef.current?.destroy?.(); } catch { }
     try { bindingRef.current?.destroy?.(); } catch { }
@@ -139,6 +157,16 @@ export default function CodePad({ onExit }: Props) {
 
     // 回到上层 / 关闭页面（保持你现有逻辑）
     onExit?.();
+  };
+
+  // Quit 按钮处理
+  const handleSaveAndQuit = async () => {
+    setConfirmOpen(false);
+    await exit(true);
+  };
+  const handleQuitWithoutSave = async () => {
+    setConfirmOpen(false);
+    await exit(false);
   };
 
   // Monaco onMount：绑定 Yjs + Awareness
@@ -165,7 +193,8 @@ export default function CodePad({ onExit }: Props) {
 
     // 协作地址/房间
     const params = new URLSearchParams(window.location.search);
-    const roomName = params.get("invite") || "default-room";
+    const roomName = "default-codepad-room"; // CodePad 统一房间
+
     // Ensure collabURL is a string: prefer env var, otherwise derive a sensible fallback from current origin
     const collabURL = process.env.NEXT_PUBLIC_COLLAB_WS ?? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/yjs`;
 
@@ -206,7 +235,7 @@ export default function CodePad({ onExit }: Props) {
 
     // 绑定 Monaco（把 awareness 传入，让 y-monaco 渲染光标/选区/标签）
     const model = editor.getModel();
-    
+
     if (!model) return;
     const binding = new YMonacoNS!.MonacoBinding(ytext, model, new Set([editor]), awareness);
 
@@ -377,7 +406,7 @@ export default function CodePad({ onExit }: Props) {
           <button className="btn run" onClick={run} disabled={running} title="Run (Ctrl/Cmd+Enter)">
             {running ? "Running…" : "Run"}
           </button>
-          <button className="btn danger" onClick={exit}>Quit</button>
+          <button className="btn danger" onClick={() => setConfirmOpen(true)}>Quit</button>
         </div>
       </div>
 
@@ -416,6 +445,21 @@ export default function CodePad({ onExit }: Props) {
           </div>
         </div>
       </div>
+
+      {confirmOpen && (
+        <div className="confirm-modal-overlay" role="dialog" aria-modal="true">
+          <div className="confirm-modal">
+            <h3>Save current code?</h3>
+            <p>Do you want to save your current coding progress before quitting?</p>
+            <div className="confirm-actions">
+              <button className="btn" onClick={handleSaveAndQuit}>Save & Quit</button>
+              <button className="btn danger" onClick={handleQuitWithoutSave}>Quit Without Saving</button>
+              <button className="btn ghost" onClick={() => setConfirmOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
