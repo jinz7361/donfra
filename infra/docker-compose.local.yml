@@ -1,25 +1,10 @@
 name: donfra-local
 
 services:
-  # ===== UI: nginx + 静态 Next 导出站 + 反向代理 =====
-  ui:
-    build:
-      context: ../donfra-ui 
-    image: donfra-ui:dev
-    # container_name 可以不写，让 compose 自己管理
-    container_name: donfra-ui
-    ports:
-      - "80:80"                      # 浏览器访问 http://localhost
-    depends_on:
-      - api
-      - ws
-    networks:
-      - donfra-local
-
   # ===== API: Go 后端 =====
   api:
     build:
-      context: ../donfra-api         # 根据你实际路径改
+      context: ../donfra-api
     image: donfra-api:dev
     container_name: donfra-api
     environment:
@@ -35,7 +20,7 @@ services:
     ports:
       - "8080:8080"            
     depends_on:
-      - donfra-db
+      - db
     networks:
       - donfra-local
 
@@ -54,7 +39,27 @@ services:
     networks:
       - donfra-local
 
-  donfra-db:
+  # ===== UI: nginx + 静态 Next 导出站 + 反向代理 =====
+  ui:
+    build:
+      context: ../donfra-ui 
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-/ws}
+    image: donfra-ui:dev
+    # container_name 可以不写，让 compose 自己管理
+    container_name: donfra-ui
+    ports:
+      - "80:80"               
+    depends_on:
+      api:
+        condition: service_started
+      ws:
+        condition: service_started
+    networks:
+      - donfra-local
+
+  db:
     image: postgres:16
     container_name: donfra-db
     environment:

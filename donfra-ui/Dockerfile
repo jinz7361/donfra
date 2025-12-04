@@ -4,8 +4,12 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Build-time env for Next (pass via --build-arg or compose build args)
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
 COPY package.json ./
-COPY .env.production ./
+# COPY .env.production ./
 RUN npm install
 
 COPY . .

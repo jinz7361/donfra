@@ -14,19 +14,6 @@ services:
       - caddy_config:/config
     networks:
       - donfra
-  # ===== UI: nginx + 静态 Next 导出站 + 反向代理 =====
-  ui:
-    build:
-      context: ../donfra-ui 
-    image: donfra-ui:dev
-    # container_name 可以不写，让 compose 自己管理
-    container_name: donfra-ui
-    depends_on:
-      - api
-      - ws
-    networks:
-      - donfra
-
   # ===== API: Go 后端 =====
   api:
     build:
@@ -58,6 +45,24 @@ services:
       - "6789"
     environment:
       - ROOM_UPDATE_URL=http://api:8080/api/room/update-people
+    networks:
+      - donfra
+
+  # ===== UI: nginx + 静态 Next 导出站 + 反向代理 =====
+  ui:
+    build:
+      context: ../donfra-ui 
+    image: donfra-ui:dev
+    arguments:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+      NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-/ws}
+    # container_name 可以不写，让 compose 自己管理
+    container_name: donfra-ui
+    depends_on:
+      api:
+        condition: service_started
+      ws:
+        condition: service_started
     networks:
       - donfra
 
