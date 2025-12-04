@@ -18,11 +18,67 @@ const port = process.env.PORT || 6789
 const staticServer = nostatic ? null : new StaticServer('../', { cache: production ? 3600 : false, gzip: production })
 
 const server = http.createServer((request, response) => {
+  // health check
   if (request.url === '/health') {
     response.writeHead(200, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify({
-      response: 'ok'
-    }))
+    response.end(JSON.stringify({ response: 'ok' }))
+    return
+  }
+
+  // control endpoint: close a Yjs room and notify connected clients
+  if ((request.method === 'POST') && (request.url === '/room/close' || request.url === '/api/room/close')) {
+    let body = ''
+    request.on('data', (chunk) => { body += chunk })
+    request.on('end', () => {
+      try {
+        const payload = body ? JSON.parse(body) : {}
+        const room = payload.room || payload.id || 'default-codepad-room'
+
+        if (!docs.has(room)) {
+          response.writeHead(404, { 'Content-Type': 'application/json' })
+          response.end(JSON.stringify({ ok: false, message: 'room not found' }))
+          return
+        }
+
+        const entry = docs.get(room)
+        // log closure intent
+        try {
+          const connsCount = entry && entry.conns ? entry.conns.size : 0
+          console.log(`${new Date().toISOString()} Closing room '${room}' with ${connsCount} connection(s)`)
+        } catch (err) { /* ignore logging errors */ }
+
+        // notify each connected socket before closing
+        try {
+          if (entry && entry.conns) {
+            for (const conn of entry.conns.keys()) {
+              try {
+                conn.send(JSON.stringify({ type: 'donfra:room_closed', room }))
+              } catch (err) { /* ignore send errors */ }
+            }
+            // close connections
+            for (const conn of entry.conns.keys()) {
+              try { conn.close(4000, 'room closed') } catch (err) { }
+            }
+          }
+        } catch (err) {
+          // best-effort; continue to delete doc
+        }
+
+        // remove doc from memory so new connections will start fresh
+        try {
+          docs.delete(room)
+          console.log(`${new Date().toISOString()} Room '${room}' deleted from docs`)
+        } catch (err) { /* ignore deletion errors */ }
+
+        response.writeHead(200, { 'Content-Type': 'application/json' })
+        response.end(JSON.stringify({ ok: true }))
+        return
+      } catch (err) {
+        response.writeHead(500, { 'Content-Type': 'application/json' })
+        response.end(JSON.stringify({ ok: false, error: String(err) }))
+        return
+      }
+    })
     return
   }
 

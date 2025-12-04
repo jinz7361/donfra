@@ -147,7 +147,7 @@ export default function CodePad({ onExit }: Props) {
     // 离开前清理内容（如果没人了）
     // If `keep` is explicitly false, we will clear; if true, we keep.
     const willKeep = typeof keep === "boolean" ? keep : true;
-    if (peers.length <= 1 && !willKeep) {
+    if (!willKeep) {
       resetCodePad();
     }
     // 断开本地协作连接，释放资源
@@ -370,6 +370,26 @@ export default function CodePad({ onExit }: Props) {
     ydocRef.current = doc;
     providerRef.current = provider;
     bindingRef.current = binding;
+    // Listen for raw WS control messages (e.g. room closed) and react by clearing the CodePad.
+    try {
+      const rawWs = (provider as any).ws
+      const onRawWsMessage = async (ev: MessageEvent) => {
+        try {
+          const data = typeof ev.data === 'string' ? JSON.parse(ev.data) : null
+          if (data && data.type === 'donfra:room_closed') {
+            try {
+              await exit(false)
+            } catch (e) {
+              // swallow errors from exit to avoid unhandled promise rejections
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+      if (rawWs && rawWs.addEventListener) {
+        rawWs.addEventListener('message', onRawWsMessage)
+        cleanupFnsRef.current.push(() => { try { rawWs.removeEventListener('message', onRawWsMessage) } catch { } })
+      }
+    } catch (e) { }
   }, [run, clearOutput, applyOutputsFromY]);
 
   // 卸载清理

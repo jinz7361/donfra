@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
 	"donfra-api/internal/domain/auth"
@@ -107,6 +109,18 @@ func (h *Handlers) RoomClose(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to close room")
 		return
 	}
+	// Notify WS service to clear/destroy the collaborative room so clients get informed
+	go func() {
+		controlURL := os.Getenv("ROOM_CONTROL_URL")
+		if controlURL == "" {
+			// default to docker compose service name or localhost for dev
+			controlURL = "http://ws:6789/room/close"
+		}
+		payload := map[string]string{"room": "default-codepad-room"}
+		b, _ := json.Marshal(payload)
+		// best-effort call, ignore errors
+		_, _ = http.Post(controlURL, "application/json", bytes.NewReader(b))
+	}()
 	httputil.WriteJSON(w, http.StatusOK, statusResp{Open: h.roomSvc.IsOpen()})
 }
 
