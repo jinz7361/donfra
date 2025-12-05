@@ -14,6 +14,13 @@ services:
       - caddy_config:/config
     networks:
       - donfra
+    depends_on:
+      api:
+        condition: service_started
+      ws:
+        condition: service_started
+      ui:
+        condition: service_started
   # ===== API: Go 后端 =====
   api:
     build:

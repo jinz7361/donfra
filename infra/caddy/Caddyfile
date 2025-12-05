@@ -1,15 +1,15 @@
 donfra.dev {
     handle /api/* {
-        reverse_proxy donfra-api:8080
+        reverse_proxy http://api:8080
     }
 
     handle /ws/* {
-        reverse_proxy donfra-ws:6789
+        reverse_proxy http://ws:6789
     }
 
     handle /yjs* {
-        reverse_proxy donfra-ws:6789
+        reverse_proxy http://ws:6789
     }
 
-    reverse_proxy donfra-ui:3000
+    reverse_proxy http://ui:3000
 }
