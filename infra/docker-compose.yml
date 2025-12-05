@@ -50,14 +50,13 @@ services:
 
   # ===== UI: Next SSR app =====
   ui:
-    build:
-      context: ../donfra-ui 
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
-        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:8080}
-        WS_PROXY_TARGET: ${WS_PROXY_TARGET:-http://ws:6789}
-    image: donfra-ui:dev
+    image: doneowth/donfra-ui:1.0.0
     container_name: donfra-ui
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-/api}
+      - NEXT_PUBLIC_COLLAB_WS=${NEXT_PUBLIC_COLLAB_WS:-/yjs}
+      - API_PROXY_TARGET=${API_PROXY_TARGET:-http://api:8080}
+      - WS_PROXY_TARGET=${WS_PROXY_TARGET:-http://ws:6789}
     expose:
       - "3000"
     depends_on:
