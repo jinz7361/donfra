@@ -1,4 +1,4 @@
-donfra.dev {
+donfra.dev www.donfra.dev {
     handle /api/* {
         reverse_proxy http://api:8080
     }
