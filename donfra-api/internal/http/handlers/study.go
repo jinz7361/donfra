@@ -9,17 +9,27 @@ import (
 	"gorm.io/gorm"
 
 	"donfra-api/internal/domain/study"
+	"donfra-api/internal/http/middleware"
 	"donfra-api/internal/pkg/httputil"
 )
 
-// ListLessonsHandler handles GET /api/lessons and returns published lessons.
+// ListLessonsHandler handles GET /api/lessons and returns lessons based on auth status.
+// Admin users see all lessons (published + unpublished), regular users see only published.
+// Requires OptionalAdmin middleware to set context.
 func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
 	if h.studySvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "study service unavailable")
 		return
 	}
 
-	lessons, err := h.studySvc.ListPublishedLessons(r.Context())
+	var lessons []study.Lesson
+	var err error
+	if middleware.IsAdminFromContext(r.Context()) {
+		lessons, err = h.studySvc.ListAllLessons(r.Context())
+	} else {
+		lessons, err = h.studySvc.ListPublishedLessons(r.Context())
+	}
+
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to load lessons")
 		return
@@ -29,6 +39,8 @@ func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetLessonBySlugHandler handles GET /api/lessons/{slug} and returns the lesson with full content.
+// Unpublished lessons can only be accessed by admin users.
+// Requires OptionalAdmin middleware to set context.
 func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	if h.studySvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "study service unavailable")
@@ -50,6 +62,12 @@ func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// If lesson is unpublished, verify admin access
+	if !lesson.IsPublished && !middleware.IsAdminFromContext(r.Context()) {
+		httputil.WriteError(w, http.StatusNotFound, "lesson not found")
+		return
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, lesson)
 }
 
@@ -67,10 +85,11 @@ func (h *Handlers) CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lesson := &study.Lesson{
-		Slug:       req.Slug,
-		Title:      req.Title,
-		Markdown:   req.Markdown,
-		Excalidraw: req.Excalidraw,
+		Slug:        req.Slug,
+		Title:       req.Title,
+		Markdown:    req.Markdown,
+		Excalidraw:  req.Excalidraw,
+		IsPublished: req.IsPublished,
 	}
 
 	created, err := h.studySvc.CreateLesson(r.Context(), lesson)

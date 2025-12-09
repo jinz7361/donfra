@@ -12,6 +12,7 @@ import (
 
 type Lister interface {
 	ListPublishedLessons(ctx context.Context) ([]Lesson, error)
+	ListAllLessons(ctx context.Context) ([]Lesson, error)
 }
 
 type Getter interface {
@@ -133,6 +134,15 @@ func (s *Service) DeleteLessonBySlug(ctx context.Context, slug string) error {
 func (s *Service) ListPublishedLessons(ctx context.Context) ([]Lesson, error) {
 	var lessons []Lesson
 	if err := s.db.WithContext(ctx).Where("is_published = ?", true).Find(&lessons).Error; err != nil {
+		return nil, err
+	}
+	return lessons, nil
+}
+
+// ListAllLessons returns all lessons (both published and unpublished).
+func (s *Service) ListAllLessons(ctx context.Context) ([]Lesson, error) {
+	var lessons []Lesson
+	if err := s.db.WithContext(ctx).Find(&lessons).Error; err != nil {
 		return nil, err
 	}
 	return lessons, nil

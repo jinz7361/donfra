@@ -25,6 +25,7 @@ type AuthService interface {
 
 type StudyService interface {
 	ListPublishedLessons(ctx context.Context) ([]study.Lesson, error)
+	ListAllLessons(ctx context.Context) ([]study.Lesson, error)
 	GetLessonBySlug(ctx context.Context, slug string) (*study.Lesson, error)
 	CreateLesson(ctx context.Context, lesson *study.Lesson) (*study.Lesson, error)
 	UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]any) error

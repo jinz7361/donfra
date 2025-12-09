@@ -20,10 +20,11 @@ type Lesson struct {
 
 // CreateLessonRequest represents a request to create a new lesson.
 type CreateLessonRequest struct {
-	Slug       string         `json:"slug"`
-	Title      string         `json:"title"`
-	Markdown   string         `json:"markdown"`
-	Excalidraw datatypes.JSON `json:"excalidraw"`
+	Slug        string         `json:"slug"`
+	Title       string         `json:"title"`
+	Markdown    string         `json:"markdown"`
+	Excalidraw  datatypes.JSON `json:"excalidraw"`
+	IsPublished bool           `json:"isPublished"`
 }
 
 // UpdateLessonRequest represents a request to update an existing lesson.
@@ -31,7 +32,7 @@ type UpdateLessonRequest struct {
 	Title       string         `json:"title"`
 	Markdown    string         `json:"markdown"`
 	Excalidraw  datatypes.JSON `json:"excalidraw"`
-	IsPublished *bool          `json:"is_published"`
+	IsPublished *bool          `json:"isPublished"`
 }
 
 // UpdateLessonResponse represents the response after updating a lesson.

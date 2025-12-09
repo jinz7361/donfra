@@ -44,11 +44,22 @@ export default function EditLessonClient({ slug }: { slug: string }) {
   }, []);
 
   useEffect(() => {
+    // Skip fetching until token state is initialized
+    if (typeof window !== "undefined" && token === null && localStorage.getItem("admin_token")) {
+      return; // Token is being set, wait for next render
+    }
+
     (async () => {
       try {
         setError(null);
         setLoading(true);
-        const res = await fetch(`${API_ROOT}/lessons/${slug}`);
+
+        const headers: HeadersInit = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`${API_ROOT}/lessons/${slug}`, { headers });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
         let excaliData = data.excalidraw;
@@ -80,7 +91,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
         setLoading(false);
       }
     })();
-  }, [slug]);
+  }, [slug, token]);
 
   const handleSave = async () => {
     if (!token) {

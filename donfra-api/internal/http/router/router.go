@@ -40,8 +40,9 @@ func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, auth
 	v1.Post("/room/close", h.RoomClose)
 	v1.Post("/room/run", h.RunCode)
 
-	v1.Get("/lessons", h.ListLessonsHandler)
-	v1.Get("/lessons/{slug}", h.GetLessonBySlugHandler)
+	// Lesson routes with optional admin middleware for read operations
+	v1.With(middleware.OptionalAdmin(authSvc)).Get("/lessons", h.ListLessonsHandler)
+	v1.With(middleware.OptionalAdmin(authSvc)).Get("/lessons/{slug}", h.GetLessonBySlugHandler)
 	v1.With(middleware.AdminOnly(authSvc)).Post("/lessons", h.CreateLessonHandler)
 	v1.With(middleware.AdminOnly(authSvc)).Patch("/lessons/{slug}", h.UpdateLessonHandler)
 	v1.With(middleware.AdminOnly(authSvc)).Delete("/lessons/{slug}", h.DeleteLessonHandler)

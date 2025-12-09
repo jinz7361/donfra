@@ -34,13 +34,20 @@ function LibraryInner() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("admin_token");
-      setIsAdmin(Boolean(token));
-    }
     (async () => {
       try {
-        const res = await fetch(`${API_ROOT}/lessons`);
+        let token: string | null = null;
+        if (typeof window !== "undefined") {
+          token = localStorage.getItem("admin_token");
+          setIsAdmin(Boolean(token));
+        }
+
+        const headers: HeadersInit = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`${API_ROOT}/lessons`, { headers });
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Unexpected response");
         setLessons(data);
@@ -107,27 +114,35 @@ function LibraryInner() {
                 </tr>
               </thead>
               <tbody>
-                {lessons.map((lesson) => (
-                  <tr key={lesson.slug} style={{ borderBottom: "1px solid rgba(169,142,100,0.1)" }}>
-                    <td style={{ padding: "10px 6px", color: "#c8c1b4" }}>{lesson.id}</td>
-                    <td style={{ padding: "10px 6px" }}>
-                      <button
-                        onClick={() => router.push(`/library/${lesson.slug}`)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#f4d18c",
-                          cursor: "pointer",
-                          textDecoration: "underline",
-                          fontSize: 15,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {lesson.title || lesson.slug}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {lessons.map((lesson) => {
+                  const isUnpublished = lesson.isPublished === false;
+                  return (
+                    <tr key={lesson.slug} style={{ borderBottom: "1px solid rgba(169,142,100,0.1)" }}>
+                      <td style={{ padding: "10px 6px", color: isUnpublished ? "#666" : "#c8c1b4" }}>
+                        {lesson.id}
+                      </td>
+                      <td style={{ padding: "10px 6px" }}>
+                        <button
+                          onClick={() => router.push(`/library/${lesson.slug}`)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: isUnpublished ? "#888" : "#f4d18c",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            fontSize: 15,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {lesson.title || lesson.slug}
+                          {isUnpublished && (
+                            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>(unpublished)</span>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {lessons.length === 0 && (
                   <tr>
                     <td colSpan={2} style={{ padding: "10px 6px", color: "#aaa" }}>
