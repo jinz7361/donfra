@@ -27,7 +27,7 @@ type StudyService interface {
 	ListPublishedLessons(ctx context.Context) ([]study.Lesson, error)
 	GetLessonBySlug(ctx context.Context, slug string) (*study.Lesson, error)
 	CreateLesson(ctx context.Context, lesson *study.Lesson) (*study.Lesson, error)
-	UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]interface{}) error
+	UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]any) error
 	DeleteLessonBySlug(ctx context.Context, slug string) error
 }
 
@@ -35,17 +35,8 @@ func New(roomSvc *room.Service, studySvc StudyService, auth AuthService) *Handle
 	return &Handlers{roomSvc: roomSvc, studySvc: studySvc, auth: auth}
 }
 
-type initReq struct {
-	Passcode string `json:"passcode"`
-	Size     int    `json:"size"`
-}
-type initResp struct {
-	InviteURL string `json:"inviteUrl"`
-	Token     string `json:"token,omitempty"`
-}
-
 func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
-	var req initReq
+	var req room.InitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
@@ -55,14 +46,7 @@ func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusConflict, err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, initResp{InviteURL: url, Token: token})
-}
-
-type statusResp struct {
-	Open       bool   `json:"open"`
-	InviteLink string `json:"inviteLink,omitempty"`
-	Headcount  int    `json:"headcount,omitempty"`
-	Limit      int    `json:"limit,omitempty"`
+	httputil.WriteJSON(w, http.StatusOK, room.InitResponse{InviteURL: url, Token: token})
 }
 
 func (h *Handlers) RoomStatus(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +54,7 @@ func (h *Handlers) RoomStatus(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusInternalServerError, "invite link is empty while room is open")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, statusResp{
+	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{
 		Open:       h.roomSvc.IsOpen(),
 		InviteLink: h.roomSvc.InviteLink(),
 		Headcount:  h.roomSvc.Headcount(),
@@ -78,12 +62,8 @@ func (h *Handlers) RoomStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-type joinReq struct {
-	Token string `json:"token"`
-}
-
 func (h *Handlers) RoomJoin(w http.ResponseWriter, r *http.Request) {
-	var req joinReq
+	var req room.JoinRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
@@ -106,7 +86,7 @@ func (h *Handlers) RoomJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{Name: "room_access", Value: "1", Path: "/", MaxAge: 86400, SameSite: http.SameSiteLaxMode, HttpOnly: false, Secure: false})
-	httputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	httputil.WriteJSON(w, http.StatusOK, room.JoinResponse{Success: true})
 }
 
 func (h *Handlers) RoomClose(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +98,7 @@ func (h *Handlers) RoomClose(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to close room")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, statusResp{Open: h.roomSvc.IsOpen()})
+	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{Open: h.roomSvc.IsOpen()})
 }
 
 func (h *Handlers) requireAdmin(r *http.Request) bool {
@@ -149,10 +129,7 @@ func (h *Handlers) requireAdmin(r *http.Request) bool {
 }
 
 func (h *Handlers) RoomUpdatePeople(w http.ResponseWriter, r *http.Request) {
-	// Accept JSON body: { "headcount": <int> }
-	var req struct {
-		Headcount int `json:"headcount"`
-	}
+	var req room.UpdateHeadcountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
@@ -163,6 +140,5 @@ func (h *Handlers) RoomUpdatePeople(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return current headcount as confirmation
-	httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{"people": req.Headcount})
+	httputil.WriteJSON(w, http.StatusOK, room.UpdateHeadcountResponse{Headcount: req.Headcount})
 }

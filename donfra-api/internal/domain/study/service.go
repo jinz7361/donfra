@@ -103,7 +103,7 @@ func (s *Service) CreateLesson(ctx context.Context, lesson *Lesson) (*Lesson, er
 }
 
 // UpdateLessonBySlug updates fields for the given lesson slug.
-func (s *Service) UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]interface{}) error {
+func (s *Service) UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]any) error {
 	if len(updates) == 0 {
 		return errors.New("no updates provided")
 	}

@@ -6,13 +6,36 @@ import (
 	"gorm.io/datatypes"
 )
 
+// Lesson represents an educational lesson in the system.
 type Lesson struct {
-	ID          uint           `gorm:"primaryKey"`
-	Slug        string         `gorm:"not null"`
-	Title       string         `gorm:"not null"`
-	Markdown    string         `gorm:"type:text;not null"`
-	Excalidraw  datatypes.JSON `gorm:"type:jsonb;not null"`
-	IsPublished bool           `gorm:"not null;default:true"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Slug        string         `gorm:"not null" json:"slug"`
+	Title       string         `gorm:"not null" json:"title"`
+	Markdown    string         `gorm:"type:text;not null" json:"markdown"`
+	Excalidraw  datatypes.JSON `gorm:"type:jsonb;not null" json:"excalidraw"`
+	IsPublished bool           `gorm:"not null;default:true" json:"isPublished"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+}
+
+// CreateLessonRequest represents a request to create a new lesson.
+type CreateLessonRequest struct {
+	Slug       string         `json:"slug"`
+	Title      string         `json:"title"`
+	Markdown   string         `json:"markdown"`
+	Excalidraw datatypes.JSON `json:"excalidraw"`
+}
+
+// UpdateLessonRequest represents a request to update an existing lesson.
+type UpdateLessonRequest struct {
+	Title       string         `json:"title"`
+	Markdown    string         `json:"markdown"`
+	Excalidraw  datatypes.JSON `json:"excalidraw"`
+	IsPublished *bool          `json:"is_published"`
+}
+
+// UpdateLessonResponse represents the response after updating a lesson.
+type UpdateLessonResponse struct {
+	Slug    string `json:"slug"`
+	Updated bool   `json:"updated"`
 }

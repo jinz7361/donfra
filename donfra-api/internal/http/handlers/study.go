@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
 	"donfra-api/internal/domain/study"
@@ -61,12 +60,7 @@ func (h *Handlers) CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Slug       string         `json:"slug"`
-		Title      string         `json:"title"`
-		Markdown   string         `json:"markdown"`
-		Excalidraw datatypes.JSON `json:"excalidraw"`
-	}
+	var req study.CreateLessonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
@@ -104,18 +98,13 @@ func (h *Handlers) UpdateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Title       string         `json:"title"`
-		Markdown    string         `json:"markdown"`
-		Excalidraw  datatypes.JSON `json:"excalidraw"`
-		IsPublished *bool          `json:"is_published"`
-	}
+	var req study.UpdateLessonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 	if req.Title != "" {
 		updates["title"] = req.Title
 	}
@@ -143,9 +132,9 @@ func (h *Handlers) UpdateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"slug":    slug,
-		"updated": true,
+	httputil.WriteJSON(w, http.StatusOK, study.UpdateLessonResponse{
+		Slug:    slug,
+		Updated: true,
 	})
 }
 
