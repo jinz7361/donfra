@@ -60,18 +60,18 @@ export const api = {
         },
         credentials: "include",
         body: JSON.stringify({
-          Slug: data.slug,
-          Title: data.title,
-          Markdown: data.markdown,
-          Excalidraw: data.excalidraw,
-          IsPublished: data.isPublished ?? true,
+          slug: data.slug,
+          title: data.title,
+          markdown: data.markdown,
+          excalidraw: data.excalidraw,
+          isPublished: data.isPublished ?? true,
         }),
       }).then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
         return body;
       }),
-    update: (slug: string, data: { title?: string; markdown?: string; excalidraw?: any }, token: string) =>
+    update: (slug: string, data: { title?: string; markdown?: string; excalidraw?: any; isPublished?: boolean }, token: string) =>
       fetch(`${API_BASE}/lessons/${slug}`, {
         method: "PATCH",
         headers: {
@@ -80,9 +80,10 @@ export const api = {
         },
         credentials: "include",
         body: JSON.stringify({
-          ...(data.title !== undefined ? { Title: data.title } : {}),
-          ...(data.markdown !== undefined ? { Markdown: data.markdown } : {}),
-          ...(data.excalidraw !== undefined ? { Excalidraw: data.excalidraw } : {}),
+          ...(data.title !== undefined ? { title: data.title } : {}),
+          ...(data.markdown !== undefined ? { markdown: data.markdown } : {}),
+          ...(data.excalidraw !== undefined ? { excalidraw: data.excalidraw } : {}),
+          ...(data.isPublished !== undefined ? { isPublished: data.isPublished } : {}),
         }),
       }).then(async (res) => {
         const body = await res.json().catch(() => ({}));

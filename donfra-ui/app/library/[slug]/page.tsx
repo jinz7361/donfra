@@ -1,5 +1,6 @@
 import LessonDetailClient from "./LessonDetailClient";
 
-export default function LessonDetailPage({ params }: { params: { slug: string } }) {
-  return <LessonDetailClient slug={params.slug} />;
+export default async function LessonDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return <LessonDetailClient slug={slug} />;
 }

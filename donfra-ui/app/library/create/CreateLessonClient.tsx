@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { API_BASE, api } from "@/lib/api";
+import { EMPTY_EXCALIDRAW, sanitizeExcalidraw, type ExcalidrawData } from "@/lib/utils/excalidraw";
+import "../[slug]/edit/edit-lesson.css";
 
 type LessonPayload = {
   slug: string;
@@ -18,15 +20,6 @@ const Excalidraw = dynamic(() => import("@excalidraw/excalidraw").then((mod) => 
   loading: () => <div style={{ color: "#aaa" }}>Loading diagram…</div>,
 });
 
-const EMPTY_EXCALIDRAW = {
-  type: "excalidraw",
-  version: 2,
-  source: "https://excalidraw.com",
-  elements: [] as any[],
-  appState: { collaborators: new Map() },
-  files: {},
-};
-
 export default function CreateLessonClient() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
@@ -36,7 +29,7 @@ export default function CreateLessonClient() {
   const [isPublished, setIsPublished] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const excaliRef = useRef<any>(EMPTY_EXCALIDRAW);
+  const excaliRef = useRef<ExcalidrawData>(EMPTY_EXCALIDRAW);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,22 +37,6 @@ export default function CreateLessonClient() {
     setToken(saved);
     if (!saved) setError("Admin login required to create lessons.");
   }, []);
-
-  const sanitizeExcalidraw = (raw: any) => {
-    if (!raw || typeof raw !== "object") return { ...EMPTY_EXCALIDRAW };
-    const appState = raw.appState || {};
-    return {
-      type: "excalidraw",
-      version: raw.version ?? 2,
-      source: raw.source ?? "https://excalidraw.com",
-      elements: Array.isArray(raw.elements) ? raw.elements : [],
-      appState: {
-        ...appState,
-        collaborators: appState.collaborators instanceof Map ? appState.collaborators : new Map(),
-      },
-      files: { ...(raw.files || {}) },
-    };
-  };
 
   const handleSubmit = async () => {
     if (!token) {
@@ -121,133 +98,76 @@ export default function CreateLessonClient() {
       <h1 style={{ marginTop: 0, marginBottom: 12 }}>Create Lesson</h1>
       {error && <div style={{ color: "#f88", marginBottom: 12 }}>{error}</div>}
 
-      <div
-        style={{
-          border: "1px solid #333",
-          borderRadius: 8,
-          padding: 20,
-          background: "#0f1211",
-          width: "100%",
-          flex: 1,
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: 14,
-        }}
-      >
-        <div>
-          <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Title</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 6,
-              border: "1px solid #444",
-              background: "#0b0c0c",
-              color: "#eee",
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Slug</label>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 6,
-              border: "1px solid #444",
-              background: "#0b0c0c",
-              color: "#eee",
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Markdown</label>
-          <textarea
-            value={markdown}
-            onChange={(e) => setMarkdown(e.target.value)}
-            rows={18}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 6,
-              border: "1px solid #444",
-              background: "#0b0c0c",
-              color: "#eee",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
-            }}
-          />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            id="isPublished"
-            type="checkbox"
-            checked={isPublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-            style={{ width: 16, height: 16 }}
-          />
-          <label htmlFor="isPublished" style={{ color: "#ccc" }}>Published</label>
-        </div>
-
-        <div>
-          <h4 style={{ margin: "0 0 8px 0", color: "#ddd" }}>Diagram</h4>
-          <div
-            style={{
-              position: "relative",
-              border: "1px solid #1c1f1e",
-              borderRadius: 8,
-              overflow: "hidden",
-              background: "#1a1d1c",
-              minHeight: 320,
-              height: 520,
-            }}
-          >
-            <Excalidraw
-              initialData={excaliRef.current}
-              onChange={(elements, appState, files) => {
-                excaliRef.current = sanitizeExcalidraw({
-                  ...excaliRef.current,
-                  elements,
-                  appState,
-                  files,
-                });
-              }}
+      <div className="edit-lesson-container">
+        {/* Header fields: Title, Slug, Published */}
+        <div className="edit-lesson-header">
+          <div className="edit-lesson-field">
+            <label>Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
+          </div>
+          <div className="edit-lesson-field">
+            <label>Slug</label>
+            <input
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              id="isPublished"
+              type="checkbox"
+              checked={isPublished}
+              onChange={(e) => setIsPublished(e.target.checked)}
+              style={{ width: 16, height: 16 }}
+            />
+            <label htmlFor="isPublished" style={{ color: "#ccc", margin: 0 }}>Published</label>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+        {/* 水平布局：左边Markdown编辑器，右边Diagram */}
+        <div className="edit-content-grid">
+          {/* Markdown 编辑器 */}
+          <div className="edit-content-column">
+            <h4>Markdown</h4>
+            <textarea
+              className="edit-markdown-editor"
+              value={markdown}
+              onChange={(e) => setMarkdown(e.target.value)}
+            />
+          </div>
+
+          {/* Excalidraw 区域 */}
+          <div className="edit-content-column">
+            <h4>Diagram</h4>
+            <div className="edit-diagram-container">
+              <Excalidraw
+                initialData={excaliRef.current}
+                onChange={(elements) => {
+                  excaliRef.current = sanitizeExcalidraw({
+                    ...excaliRef.current,
+                    elements,
+                  });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="edit-actions">
           <button
+            className="btn-save"
             onClick={handleSubmit}
             disabled={saving}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 6,
-              border: "1px solid #f4d18c",
-              background: "#f4d18c",
-              color: "#0b0c0c",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
           >
             {saving ? "Submitting…" : "Create lesson"}
           </button>
           <button
+            className="btn-cancel"
             onClick={() => router.push("/library")}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 6,
-              border: "1px solid #444",
-              background: "transparent",
-              color: "#eee",
-              cursor: "pointer",
-            }}
           >
             Cancel
           </button>

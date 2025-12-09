@@ -8,6 +8,7 @@ import ReactMarkdown, {
 } from "react-markdown";
 import { API_BASE, api } from "@/lib/api";
 import { EMPTY_EXCALIDRAW, sanitizeExcalidraw } from "@/lib/utils/excalidraw";
+import "./lesson-detail.css";
 
 type Lesson = {
   id: number;
@@ -281,58 +282,37 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
             <div style={{ color: "#f88", marginBottom: 12 }}>{actionError}</div>
           )}
 
-          {/* Markdown 内容 */}
-          <div
-            style={{
-              borderTop: "1px solid #333",
-              paddingTop: 12,
-              marginTop: 8,
-            }}
-          >
-            <h4 style={{ margin: "0 0 8px 0", color: "#ddd" }}>Content</h4>
-            {lesson.markdown ? (
-              <div
-                style={{
-                  background: "#0c0f0e",
-                  border: "1px solid #1c1f1e",
-                  borderRadius: 8,
-                  padding: "12px 14px",
-                  color: "#e7e7e7",
-                  fontSize: 15,
-                }}
-              >
-                <ReactMarkdown components={markdownComponents}>
-                  {lesson.markdown}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div style={{ color: "#888" }}>No content.</div>
-            )}
-          </div>
-          {/* Excalidraw 区域 */}
-          <div style={{ marginTop: 18 }}>
-            <h4 style={{ margin: "0 0 8px 0", color: "#ddd" }}>Diagram</h4>
-            {canRenderDiagram ? (
-              <div
-                style={{
-                  position: "relative",
-                  border: "1px solid #1c1f1e",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  background: "#1a1d1c",
-                  minHeight: 360,
-                  height: 420,
-                }}
-              >
-                <Excalidraw
-                  initialData={lesson.excalidraw || EMPTY_EXCALIDRAW}
-                  zenModeEnabled
-                  gridModeEnabled
-                />
-              </div>
-            ) : (
-              <div style={{ color: "#888" }}>Preparing canvas…</div>
-            )}
+          {/* 水平布局：左边Markdown，右边Diagram */}
+          <div className="lesson-content-grid">
+            {/* Markdown 内容 */}
+            <div className="lesson-content-column">
+              <h4>Content</h4>
+              {lesson.markdown ? (
+                <div className="lesson-markdown-content">
+                  <ReactMarkdown components={markdownComponents}>
+                    {lesson.markdown}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div style={{ color: "#888" }}>No content.</div>
+              )}
+            </div>
+
+            {/* Excalidraw 区域 */}
+            <div className="lesson-content-column">
+              <h4>Diagram</h4>
+              {canRenderDiagram ? (
+                <div className="lesson-diagram-container">
+                  <Excalidraw
+                    initialData={lesson.excalidraw || EMPTY_EXCALIDRAW}
+                    zenModeEnabled
+                    gridModeEnabled
+                  />
+                </div>
+              ) : (
+                <div style={{ color: "#888" }}>Preparing canvas…</div>
+              )}
+            </div>
           </div>
 
         </div>

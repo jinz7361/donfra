@@ -1,0 +1,73 @@
+/* Lesson Detail Page - Responsive Layout */
+
+.lesson-content-grid {
+  border-top: 1px solid #333;
+  padding-top: 12px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.lesson-content-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-content-column h4 {
+  margin: 0 0 8px 0;
+  color: #ddd;
+}
+
+.lesson-markdown-content {
+  background: #0c0f0e;
+  border: 1px solid #1c1f1e;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #e7e7e7;
+  font-size: 15px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.lesson-diagram-container {
+  position: relative;
+  border: 1px solid #1c1f1e;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1d1c;
+  min-height: 360px;
+  height: 520px;
+  flex: 1;
+}
+
+/* 手机端：垂直布局 */
+@media (max-width: 768px) {
+  .lesson-content-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .lesson-markdown-content {
+    max-height: 400px;
+  }
+
+  .lesson-diagram-container {
+    height: 400px;
+    min-height: 300px;
+  }
+}
+
+/* 小屏手机 */
+@media (max-width: 480px) {
+  .lesson-markdown-content {
+    max-height: 300px;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .lesson-diagram-container {
+    height: 350px;
+    min-height: 250px;
+  }
+}

@@ -16,7 +16,9 @@ export interface ExcalidrawData {
  */
 export const EMPTY_EXCALIDRAW: ExcalidrawData = {
   elements: [],
-  appState: {},
+  appState: {
+    collaborators: new Map(),
+  },
   files: null,
 };
 
@@ -32,9 +34,17 @@ export function sanitizeExcalidraw(raw: any): ExcalidrawData {
     return { ...EMPTY_EXCALIDRAW };
   }
 
+  const appState = raw.appState && typeof raw.appState === 'object' ? raw.appState : {};
+
+  // Ensure collaborators is a Map (Excalidraw requires this)
+  // JSON.parse converts Map to plain object, so we need to restore it
+  if (!(appState.collaborators instanceof Map)) {
+    appState.collaborators = new Map();
+  }
+
   return {
     elements: Array.isArray(raw.elements) ? raw.elements : [],
-    appState: raw.appState && typeof raw.appState === 'object' ? raw.appState : {},
+    appState,
     files: raw.files || null,
   };
 }

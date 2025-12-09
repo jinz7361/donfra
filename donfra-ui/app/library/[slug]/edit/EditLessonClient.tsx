@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { API_BASE, api } from "@/lib/api";
 import { EMPTY_EXCALIDRAW, sanitizeExcalidraw, type ExcalidrawData } from "@/lib/utils/excalidraw";
+import "./edit-lesson.css";
 
 type Lesson = {
   id: number;
@@ -12,6 +13,7 @@ type Lesson = {
   title: string;
   markdown?: string;
   excalidraw?: any;
+  isPublished?: boolean;
 };
 
 const API_ROOT = API_BASE || "/api";
@@ -30,6 +32,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [markdown, setMarkdown] = useState("");
+  const [isPublished, setIsPublished] = useState(true);
   const [diagram, setDiagram] = useState<ExcalidrawData>(EMPTY_EXCALIDRAW);
   const diagramRef = useRef<ExcalidrawData>(EMPTY_EXCALIDRAW);
 
@@ -62,10 +65,12 @@ export default function EditLessonClient({ slug }: { slug: string }) {
           title: data.title ?? slug,
           markdown: data.markdown ?? "",
           excalidraw: sanitizeExcalidraw(excaliData),
+          isPublished: data.isPublished ?? true,
         };
         setLesson(lessonData);
         setTitle(data.title ?? slug);
         setMarkdown(lessonData.markdown ?? "");
+        setIsPublished(data.isPublished ?? true);
         const sanitized = lessonData.excalidraw || EMPTY_EXCALIDRAW;
         diagramRef.current = sanitized;
         setDiagram(sanitized);
@@ -85,7 +90,12 @@ export default function EditLessonClient({ slug }: { slug: string }) {
     try {
       setSaving(true);
       setError(null);
-      await api.study.update(slug, { title: title.trim(), markdown, excalidraw: diagramRef.current }, token);
+      await api.study.update(slug, {
+        title: title.trim(),
+        markdown,
+        excalidraw: diagramRef.current,
+        isPublished
+      }, token);
       router.push(`/library/${slug}`);
     } catch (err: any) {
       setError(err?.message || "Failed to save");
@@ -130,121 +140,80 @@ export default function EditLessonClient({ slug }: { slug: string }) {
       {error && <div style={{ color: "#f88", marginBottom: 12 }}>{error}</div>}
       {loading && <div>Loading…</div>}
       {!loading && lesson && (
-        <div
-          style={{
-            border: "1px solid #333",
-            borderRadius: 8,
-            padding: 20,
-            background: "#0f1211",
-            width: "100%",
-            flex: 1,
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: 14,
-          }}
-        >
-          <div>
-            <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Title</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 6,
-                border: "1px solid #444",
-                background: "#0b0c0c",
-                color: "#eee",
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Slug</label>
-            <input
-              value={lesson.slug}
-              readOnly
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 6,
-                border: "1px solid #333",
-                background: "#0b0c0c",
-                color: "#888",
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Markdown</label>
-            <textarea
-              value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
-              rows={18}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 6,
-                border: "1px solid #444",
-                background: "#0b0c0c",
-                color: "#eee",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
-              }}
-            />
-          </div>
-          <div>
-            <h4 style={{ margin: "0 0 8px 0", color: "#ddd" }}>Diagram</h4>
-            {diagram ? (
-              <div
-                style={{
-                  position: "relative",
-                  border: "1px solid #1c1f1e",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  background: "#1a1d1c",
-                  minHeight: 320,
-                  height: 520,
-                }}
-              >
-                <Excalidraw
-                  initialData={diagramRef.current}
-                  onChange={(elements, appState, files) => {
-                    diagramRef.current = sanitizeExcalidraw({
-                      ...diagramRef.current,
-                      elements,
-                    });
-                  }}
-                />
-              </div>
-            ) : (
-              <div style={{ color: "#888" }}>Preparing canvas…</div>
-            )}
+        <div className="edit-lesson-container">
+          {/* Header fields: Title, Slug, Published */}
+          <div className="edit-lesson-header">
+            <div className="edit-lesson-field">
+              <label>Title</label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="edit-lesson-field">
+              <label>Slug</label>
+              <input
+                value={lesson.slug}
+                readOnly
+              />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                id="isPublished"
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                style={{ width: 16, height: 16 }}
+              />
+              <label htmlFor="isPublished" style={{ color: "#ccc", margin: 0 }}>Published</label>
+            </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+          {/* 水平布局：左边Markdown编辑器，右边Diagram */}
+          <div className="edit-content-grid">
+            {/* Markdown 编辑器 */}
+            <div className="edit-content-column">
+              <h4>Markdown</h4>
+              <textarea
+                className="edit-markdown-editor"
+                value={markdown}
+                onChange={(e) => setMarkdown(e.target.value)}
+              />
+            </div>
+
+            {/* Excalidraw 区域 */}
+            <div className="edit-content-column">
+              <h4>Diagram</h4>
+              {diagram ? (
+                <div className="edit-diagram-container">
+                  <Excalidraw
+                    initialData={diagramRef.current}
+                    onChange={(elements) => {
+                      diagramRef.current = sanitizeExcalidraw({
+                        ...diagramRef.current,
+                        elements,
+                      });
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ color: "#888" }}>Preparing canvas…</div>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="edit-actions">
             <button
+              className="btn-save"
               onClick={handleSave}
               disabled={saving}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 6,
-                border: "1px solid #f4d18c",
-                background: "#f4d18c",
-                color: "#0b0c0c",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
             <button
+              className="btn-cancel"
               onClick={() => router.push(`/library/${slug}`)}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 6,
-                border: "1px solid #444",
-                background: "transparent",
-                color: "#eee",
-                cursor: "pointer",
-              }}
             >
               Cancel
             </button>

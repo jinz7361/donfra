@@ -1,6 +1,6 @@
 "use client";
 
-import "@/styles/codepad.css";   // ← standalone CSS
+import "./coding.css";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import CodePad from "@/components/CodePad";
