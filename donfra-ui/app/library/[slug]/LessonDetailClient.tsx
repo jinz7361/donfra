@@ -7,13 +7,14 @@ import ReactMarkdown, {
   type Components as MarkdownComponents,
 } from "react-markdown";
 import { API_BASE, api } from "@/lib/api";
+import { EMPTY_EXCALIDRAW, sanitizeExcalidraw } from "@/lib/utils/excalidraw";
 
 type Lesson = {
-  ID: number;
-  Slug: string;
-  Title: string;
-  Markdown?: string;
-  Excalidraw?: any;
+  id: number;
+  slug: string;
+  title: string;
+  markdown?: string;
+  excalidraw?: any;
 };
 
 const API_ROOT = API_BASE || "/api";
@@ -25,21 +26,6 @@ const Excalidraw = dynamic(
     loading: () => <div style={{ color: "#aaa" }}>Loading diagram…</div>,
   }
 );
-
-const EMPTY_EXCALIDRAW = {
-  type: "excalidraw",
-  version: 2,
-  source: "https://excalidraw.com",
-  elements: [] as any[],
-  appState: {
-    gridSize: 20,
-    gridStep: 5,
-    gridModeEnabled: false,
-    viewBackgroundColor: "#ffffff",
-    collaborators: new Map(),
-  },
-  files: {},
-};
 
 // 不再用 CodeComponent 类型，自己定义一个 props 就行
 type CodeProps = React.ComponentProps<"code"> & {
@@ -158,7 +144,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
           throw new Error(data?.error || `HTTP ${res.status}`);
         }
 
-        let excaliData = data.Excalidraw ?? data.excalidraw;
+        let excaliData = data.excalidraw;
         if (typeof excaliData === "string") {
           try {
             excaliData = JSON.parse(excaliData);
@@ -166,23 +152,13 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
             excaliData = null;
           }
         }
-        const appState = excaliData?.appState || {};
-        // Excalidraw expects Map for collaborators; ensure shape to avoid runtime errors.
-        const normalizedAppState = {
-          ...appState,
-          collaborators: appState?.collaborators instanceof Map ? appState.collaborators : new Map(),
-        };
-        const normalizedExcalidraw =
-          excaliData && typeof excaliData === "object"
-            ? { ...excaliData, appState: normalizedAppState }
-            : EMPTY_EXCALIDRAW;
 
         setLesson({
-          ID: data.ID ?? data.id,
-          Slug: data.Slug ?? data.slug ?? slug,
-          Title: data.Title ?? data.title ?? slug,
-          Markdown: data.Markdown ?? data.markdown ?? "",
-          Excalidraw: normalizedExcalidraw,
+          id: data.id,
+          slug: data.slug ?? slug,
+          title: data.title ?? slug,
+          markdown: data.markdown ?? "",
+          excalidraw: sanitizeExcalidraw(excaliData),
         });
       } catch (err: any) {
         console.error("Failed to load lesson:", err);
@@ -239,7 +215,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
             background: "#0f1211",
           }}
         >
-          <h2 style={{ marginTop: 0 }}>{lesson.Title || lesson.Slug}</h2>
+          <h2 style={{ marginTop: 0 }}>{lesson.title || lesson.slug}</h2>
           <p
             style={{
               color: "#888",
@@ -248,13 +224,13 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
               fontSize: 14,
             }}
           >
-            Slug: {lesson.Slug} · ID: {lesson.ID}
+            Slug: {lesson.slug} · ID: {lesson.id}
           </p>
 
           {isAdmin && (
             <div style={{ marginBottom: 12, display: "flex", gap: 10 }}>
               <button
-                onClick={() => router.push(`/library/${lesson.Slug}/edit`)}
+                onClick={() => router.push(`/library/${lesson.slug}/edit`)}
                 style={{
                   padding: "8px 14px",
                   borderRadius: 6,
@@ -277,7 +253,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
                   try {
                     setBusy(true);
                     setActionError(null);
-                    await api.study.delete(lesson.Slug, token);
+                    await api.study.delete(lesson.slug, token);
                     router.push("/library");
                   } catch (err: any) {
                     setActionError(err?.message || "Failed to delete lesson");
@@ -314,7 +290,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
             }}
           >
             <h4 style={{ margin: "0 0 8px 0", color: "#ddd" }}>Content</h4>
-            {lesson.Markdown ? (
+            {lesson.markdown ? (
               <div
                 style={{
                   background: "#0c0f0e",
@@ -326,7 +302,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
                 }}
               >
                 <ReactMarkdown components={markdownComponents}>
-                  {lesson.Markdown}
+                  {lesson.markdown}
                 </ReactMarkdown>
               </div>
             ) : (
@@ -349,7 +325,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
                 }}
               >
                 <Excalidraw
-                  initialData={lesson.Excalidraw || EMPTY_EXCALIDRAW}
+                  initialData={lesson.excalidraw || EMPTY_EXCALIDRAW}
                   zenModeEnabled
                   gridModeEnabled
                 />

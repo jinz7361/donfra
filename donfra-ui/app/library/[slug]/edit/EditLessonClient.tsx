@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { API_BASE, api } from "@/lib/api";
-
+import { EMPTY_EXCALIDRAW, sanitizeExcalidraw, type ExcalidrawData } from "@/lib/utils/excalidraw";
 
 type Lesson = {
-  ID: number;
-  Slug: string;
-  Title: string;
-  Markdown?: string;
-  Excalidraw?: any;
+  id: number;
+  slug: string;
+  title: string;
+  markdown?: string;
+  excalidraw?: any;
 };
 
 const API_ROOT = API_BASE || "/api";
@@ -20,24 +20,6 @@ const Excalidraw = dynamic(() => import("@excalidraw/excalidraw").then((mod) => 
   ssr: false,
   loading: () => <div style={{ color: "#aaa" }}>Loading diagram…</div>,
 });
-
-interface ExcalidrawData {
-  type: "excalidraw";
-  version: number;
-  source: string;
-  elements: readonly any[];
-  appState: any;
-  files: any;
-}
-
-const EMPTY_EXCALIDRAW: ExcalidrawData = {
-  type: "excalidraw",
-  version: 2,
-  source: "https://excalidraw.com",
-  elements: [],
-  appState: { collaborators: new Map() },
-  files: {},
-};
 
 export default function EditLessonClient({ slug }: { slug: string }) {
   const router = useRouter();
@@ -50,22 +32,6 @@ export default function EditLessonClient({ slug }: { slug: string }) {
   const [markdown, setMarkdown] = useState("");
   const [diagram, setDiagram] = useState<ExcalidrawData>(EMPTY_EXCALIDRAW);
   const diagramRef = useRef<ExcalidrawData>(EMPTY_EXCALIDRAW);
-
-  const sanitizeExcalidraw = (raw: any): ExcalidrawData => {
-    if (!raw || typeof raw !== "object") return { ...EMPTY_EXCALIDRAW };
-    const appState = raw.appState || {};
-    return {
-      type: "excalidraw",
-      version: raw.version ?? 2,
-      source: raw.source ?? "https://excalidraw.com",
-      elements: Array.isArray(raw.elements) ? raw.elements : [],
-      appState: {
-        ...appState,
-        collaborators: appState.collaborators instanceof Map ? appState.collaborators : new Map(),
-      },
-      files: { ...(raw.files || {}) },
-    };
-  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -82,7 +48,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
         const res = await fetch(`${API_ROOT}/lessons/${slug}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-        let excaliData = data.Excalidraw ?? data.excalidraw;
+        let excaliData = data.excalidraw;
         if (typeof excaliData === "string") {
           try {
             excaliData = JSON.parse(excaliData);
@@ -91,16 +57,16 @@ export default function EditLessonClient({ slug }: { slug: string }) {
           }
         }
         const lessonData: Lesson = {
-          ID: data.ID ?? data.id,
-          Slug: data.Slug ?? data.slug ?? slug,
-          Title: data.Title ?? data.title ?? slug,
-          Markdown: data.Markdown ?? data.markdown ?? "",
-          Excalidraw: sanitizeExcalidraw(excaliData),
+          id: data.id,
+          slug: data.slug ?? slug,
+          title: data.title ?? slug,
+          markdown: data.markdown ?? "",
+          excalidraw: sanitizeExcalidraw(excaliData),
         };
         setLesson(lessonData);
-        setTitle(data.Title ?? data.title ?? slug);
-        setMarkdown(lessonData.Markdown ?? "");
-        const sanitized = lessonData.Excalidraw || EMPTY_EXCALIDRAW;
+        setTitle(data.title ?? slug);
+        setMarkdown(lessonData.markdown ?? "");
+        const sanitized = lessonData.excalidraw || EMPTY_EXCALIDRAW;
         diagramRef.current = sanitized;
         setDiagram(sanitized);
       } catch (err: any) {
@@ -195,7 +161,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
           <div>
             <label style={{ display: "block", color: "#ccc", marginBottom: 6 }}>Slug</label>
             <input
-              value={lesson.Slug}
+              value={lesson.slug}
               readOnly
               style={{
                 width: "100%",

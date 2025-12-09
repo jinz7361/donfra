@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
 
 type Lesson = {
-  ID: number;
-  Slug: string;
-  Title: string;
-  Markdown?: string;
-  Excalidraw?: any;
+  id: number;
+  slug: string;
+  title: string;
+  markdown?: string;
+  excalidraw?: any;
+  isPublished?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 const API_ROOT = API_BASE || "/api";
@@ -105,11 +108,11 @@ function LibraryInner() {
               </thead>
               <tbody>
                 {lessons.map((lesson) => (
-                  <tr key={lesson.Slug} style={{ borderBottom: "1px solid rgba(169,142,100,0.1)" }}>
-                    <td style={{ padding: "10px 6px", color: "#c8c1b4" }}>{lesson.ID}</td>
+                  <tr key={lesson.slug} style={{ borderBottom: "1px solid rgba(169,142,100,0.1)" }}>
+                    <td style={{ padding: "10px 6px", color: "#c8c1b4" }}>{lesson.id}</td>
                     <td style={{ padding: "10px 6px" }}>
                       <button
-                        onClick={() => router.push(`/library/${lesson.Slug}`)}
+                        onClick={() => router.push(`/library/${lesson.slug}`)}
                         style={{
                           background: "none",
                           border: "none",
@@ -120,7 +123,7 @@ function LibraryInner() {
                           fontWeight: 600,
                         }}
                       >
-                        {lesson.Title || lesson.Slug}
+                        {lesson.title || lesson.slug}
                       </button>
                     </td>
                   </tr>

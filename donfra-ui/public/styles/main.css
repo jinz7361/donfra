@@ -1,8 +1,8 @@
 /* ==========================================
    007 × Defender — Spy/Hacker Edition
-   Fonts: Orbitron (titles), Rajdhani (UI), IBM Plex Mono (body)
+   Fonts: Orbitron (titles), Rajdhani (UI), IBM Plex Mono (body), Share Tech Mono (code)
+   Note: Fonts loaded in layout.tsx to avoid duplicate requests
    ========================================== */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 :root {
   --bg:#0B0C0C;
