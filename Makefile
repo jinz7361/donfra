@@ -4,7 +4,7 @@ SHELL := /bin/zsh
 COMPOSE_FILE ?= infra/docker-compose.local.yml
 
 # UI Image Tag
-UI_IMAGE_TAG ?= 1.0.3
+UI_IMAGE_TAG ?= 1.0.4
 
 # Allow overriding compose command (support `docker-compose` or `docker compose`)
 DOCKER_COMPOSE ?= docker-compose
