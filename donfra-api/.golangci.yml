@@ -1,0 +1,67 @@
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+
+linters:
+  enable:
+    - errcheck      # 检查未处理的错误
+    - gosimple      # 简化代码
+    - govet         # 报告可疑的构造
+    - ineffassign   # 检测无效的赋值
+    - staticcheck   # 静态分析
+    - unused        # 检查未使用的代码
+    - gofmt         # 检查代码格式
+    - goimports     # 检查 import 顺序
+    - misspell      # 拼写检查
+    - revive        # 替代 golint
+    - goconst       # 查找可以用常量替换的字符串
+    - gocyclo       # 循环复杂度
+    - bodyclose     # 检查 HTTP response body 是否关闭
+
+  disable:
+    - typecheck     # 有时会误报
+
+linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+
+  govet:
+    check-shadowing: false
+
+  gocyclo:
+    min-complexity: 15
+
+  staticcheck:
+    checks:
+      - "all"
+      - "-S1016"  # 允许显式字段赋值而不是类型转换
+
+  revive:
+    rules:
+      - name: exported
+        disabled: true  # 不强制要求导出函数有注释
+
+issues:
+  exclude-rules:
+    # 测试文件中允许使用不安全的操作
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - dupl
+
+    # 允许在 main.go 中使用 log.Fatal
+    - path: cmd/
+      linters:
+        - gocritic
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

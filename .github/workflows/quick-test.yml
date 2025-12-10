@@ -1,0 +1,32 @@
+name: Quick Tests
+
+# 只在 PR 时运行快速测试
+on:
+  pull_request:
+
+jobs:
+  quick-test:
+    name: Quick Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Run Go tests
+        working-directory: ./donfra-api
+        run: |
+          echo "Running all tests..."
+          go test ./... -v -short
+
+      - name: Test summary
+        if: always()
+        working-directory: ./donfra-api
+        run: |
+          echo "=== Test Summary ==="
+          go test ./... -short 2>&1 | grep -E "^(ok|FAIL|\?)" || true
