@@ -6,54 +6,81 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel/attribute"
 	"gorm.io/gorm"
 
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/http/middleware"
 	"donfra-api/internal/pkg/httputil"
+	"donfra-api/internal/pkg/tracing"
 )
 
 // ListLessonsHandler handles GET /api/lessons and returns lessons based on auth status.
 // Admin users see all lessons (published + unpublished), regular users see only published.
 // Requires OptionalAdmin middleware to set context.
 func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.StartSpan(r.Context(), "handler.ListLessons")
+	defer span.End()
+
 	if h.studySvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "study service unavailable")
 		return
 	}
 
+	// Check admin status
+	_, authSpan := tracing.StartSpan(ctx, "handler.CheckAdminAuth")
+	isAdmin := middleware.IsAdminFromContext(ctx)
+	authSpan.SetAttributes(tracing.AttrIsAdmin.Bool(isAdmin))
+	authSpan.End()
+
 	var lessons []study.Lesson
 	var err error
-	if middleware.IsAdminFromContext(r.Context()) {
-		lessons, err = h.studySvc.ListAllLessons(r.Context())
+	if isAdmin {
+		lessons, err = h.studySvc.ListAllLessons(ctx)
 	} else {
-		lessons, err = h.studySvc.ListPublishedLessons(r.Context())
+		lessons, err = h.studySvc.ListPublishedLessons(ctx)
 	}
 
 	if err != nil {
+		tracing.RecordError(span, err)
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to load lessons")
 		return
 	}
 
+	// Serialize response
+	_, jsonSpan := tracing.StartSpan(ctx, "handler.SerializeJSON",
+		tracing.AttrResponseCount.Int(len(lessons)),
+	)
 	httputil.WriteJSON(w, http.StatusOK, lessons)
+	jsonSpan.End()
 }
 
 // GetLessonBySlugHandler handles GET /api/lessons/{slug} and returns the lesson with full content.
 // Unpublished lessons can only be accessed by admin users.
 // Requires OptionalAdmin middleware to set context.
 func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.StartSpan(r.Context(), "handler.GetLessonBySlug")
+	defer span.End()
+
 	if h.studySvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "study service unavailable")
 		return
 	}
+
+	// Parse URL parameter
+	_, parseSpan := tracing.StartSpan(ctx, "handler.ParseSlugParam")
 	slug := chi.URLParam(r, "slug")
+	parseSpan.SetAttributes(tracing.AttrLessonSlug.String(slug))
+	parseSpan.End()
+
 	if slug == "" {
 		httputil.WriteError(w, http.StatusBadRequest, "slug is required")
 		return
 	}
 
-	lesson, err := h.studySvc.GetLessonBySlug(r.Context(), slug)
+	lesson, err := h.studySvc.GetLessonBySlug(ctx, slug)
 	if err != nil {
+		tracing.RecordError(span, err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			httputil.WriteError(w, http.StatusNotFound, "lesson not found")
 			return
@@ -63,37 +90,59 @@ func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// If lesson is unpublished, verify admin access
-	if !lesson.IsPublished && !middleware.IsAdminFromContext(r.Context()) {
-		httputil.WriteError(w, http.StatusNotFound, "lesson not found")
-		return
+	if !lesson.IsPublished {
+		_, authSpan := tracing.StartSpan(ctx, "handler.CheckUnpublishedAccess")
+		isAdmin := middleware.IsAdminFromContext(ctx)
+		authSpan.SetAttributes(
+			tracing.AttrIsAdmin.Bool(isAdmin),
+			attribute.Bool("lesson.is_published", lesson.IsPublished),
+		)
+		authSpan.End()
+
+		if !isAdmin {
+			httputil.WriteError(w, http.StatusNotFound, "lesson not found")
+			return
+		}
 	}
 
+	_, jsonSpan := tracing.StartSpan(ctx, "handler.SerializeJSON")
 	httputil.WriteJSON(w, http.StatusOK, lesson)
+	jsonSpan.End()
 }
 
 // CreateLessonHandler handles POST /api/lesson. Requires AdminOnly middleware.
 func (h *Handlers) CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracing.StartSpan(r.Context(), "handler.CreateLesson")
+	defer span.End()
+
 	if h.studySvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "study service unavailable")
 		return
 	}
 
+	// Parse JSON body
+	_, parseSpan := tracing.StartSpan(ctx, "handler.ParseJSONBody")
 	var req study.CreateLessonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		tracing.RecordError(parseSpan, err)
+		parseSpan.End()
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
+	parseSpan.SetAttributes(tracing.AttrLessonSlug.String(req.Slug))
+	parseSpan.End()
 
-	lesson := &study.Lesson{
+	newLesson := &study.Lesson{
 		Slug:        req.Slug,
 		Title:       req.Title,
 		Markdown:    req.Markdown,
 		Excalidraw:  req.Excalidraw,
 		IsPublished: req.IsPublished,
 	}
-
-	created, err := h.studySvc.CreateLesson(r.Context(), lesson)
+	
+	created, err := h.studySvc.CreateLesson(ctx, newLesson)
 	if err != nil {
+		tracing.RecordError(span, err)
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			httputil.WriteError(w, http.StatusConflict, "slug already exists")
 			return
@@ -102,7 +151,9 @@ func (h *Handlers) CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, jsonSpan := tracing.StartSpan(ctx, "handler.SerializeJSON")
 	httputil.WriteJSON(w, http.StatusCreated, created)
+	jsonSpan.End()
 }
 
 // UpdateLessonHandler handles PATCH /api/lessons/{slug}. Requires AdminOnly middleware.

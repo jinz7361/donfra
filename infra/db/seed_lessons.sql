@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS lessons (
     title TEXT NOT NULL,
     markdown TEXT NOT NULL,
     excalidraw JSONB NOT NULL,
-    is_published BOOLEAN NOT NULL DEFAULT TRUE,
+    is_published BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

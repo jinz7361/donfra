@@ -13,7 +13,7 @@ type Lesson struct {
 	Title       string         `gorm:"not null" json:"title"`
 	Markdown    string         `gorm:"type:text;not null" json:"markdown"`
 	Excalidraw  datatypes.JSON `gorm:"type:jsonb;not null" json:"excalidraw"`
-	IsPublished bool           `gorm:"not null;default:true" json:"isPublished"`
+	IsPublished bool           `gorm:"column:is_published;not null;default:false" json:"isPublished"`
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
 }

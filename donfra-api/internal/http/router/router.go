@@ -16,6 +16,10 @@ import (
 
 func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, authSvc *auth.AuthService) http.Handler {
 	root := chi.NewRouter()
+
+	// Tracing middleware (must be first to capture all requests)
+	root.Use(middleware.Tracing("donfra-api"))
+
 	root.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:7777", "http://97.107.136.151:80"},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},

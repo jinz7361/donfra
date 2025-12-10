@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 
 	"donfra-api/internal/config"
 )
@@ -22,6 +23,11 @@ func InitFromEnv() (*gorm.DB, error) {
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
+	}
+
+	// Install OpenTelemetry tracing plugin for automatic SQL query tracing
+	if err := database.Use(tracing.NewPlugin()); err != nil {
+		return nil, fmt.Errorf("failed to install tracing plugin: %w", err)
 	}
 
 	Conn = database

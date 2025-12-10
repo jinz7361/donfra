@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"donfra-api/internal/domain/auth"
+	"donfra-api/internal/pkg/tracing"
 )
 
 type Lister interface {
@@ -41,15 +42,15 @@ func NewService(db *gorm.DB, auth *auth.AuthService) *Service {
 	return &Service{db: db, auth: auth}
 }
 
-func (s *Service) Create(ctx context.Context, token string, lesson *Lesson) (*Lesson, error) {
-	if err := s.requireAdmin(token); err != nil {
-		return nil, err
-	}
-	if err := s.db.WithContext(ctx).Create(lesson).Error; err != nil {
-		return nil, err
-	}
-	return lesson, nil
-}
+// func (s *Service) Create(ctx context.Context, token string, lesson *Lesson) (*Lesson, error) {
+// 	if err := s.requireAdmin(token); err != nil {
+// 		return nil, err
+// 	}
+// 	if err := s.db.WithContext(ctx).Create(lesson).Error; err != nil {
+// 		return nil, err
+// 	}
+// 	return lesson, nil
+// }
 
 func (s *Service) Update(ctx context.Context, token, slug string, updates *Lesson) (*Lesson, error) {
 	if err := s.requireAdmin(token); err != nil {
@@ -88,19 +89,37 @@ func (s *Service) Load(ctx context.Context, slug string) (*Lesson, error) {
 }
 
 func (s *Service) GetLessonBySlug(ctx context.Context, slug string) (*Lesson, error) {
+	ctx, span := tracing.StartSpan(ctx, "study.GetLessonBySlug",
+		tracing.AttrDBOperation.String("SELECT"),
+		tracing.AttrDBTable.String("lessons"),
+		tracing.AttrLessonSlug.String(slug),
+	)
+	defer span.End()
+
 	var lesson Lesson
 	if err := s.db.WithContext(ctx).Where("slug = ?", slug).First(&lesson).Error; err != nil {
+		tracing.RecordError(span, err)
 		return nil, err
 	}
 	return &lesson, nil
 }
 
 // CreateLesson inserts a lesson. Caller must ensure admin authorization (e.g., via middleware).
-func (s *Service) CreateLesson(ctx context.Context, lesson *Lesson) (*Lesson, error) {
-	if err := s.db.WithContext(ctx).Create(lesson).Error; err != nil {
+func (s *Service) CreateLesson(ctx context.Context, newLesson *Lesson) (*Lesson, error) {
+	ctx, span := tracing.StartSpan(ctx, "study.CreateLesson",
+		tracing.AttrDBOperation.String("INSERT"),
+		tracing.AttrDBTable.String("lessons"),
+		tracing.AttrLessonSlug.String(newLesson.Slug),
+		tracing.AttrLessonIsPublished.Bool(newLesson.IsPublished),
+	)
+	defer span.End()
+
+	if err := s.db.WithContext(ctx).Create(newLesson).Error; err != nil {
+		tracing.RecordError(span, err)
 		return nil, err
 	}
-	return lesson, nil
+
+	return newLesson, nil
 }
 
 // UpdateLessonBySlug updates fields for the given lesson slug.
@@ -132,8 +151,15 @@ func (s *Service) DeleteLessonBySlug(ctx context.Context, slug string) error {
 
 // ListPublishedLessons returns all lessons marked as published.
 func (s *Service) ListPublishedLessons(ctx context.Context) ([]Lesson, error) {
+	ctx, span := tracing.StartSpan(ctx, "study.ListPublishedLessons",
+		tracing.AttrDBOperation.String("SELECT"),
+		tracing.AttrDBTable.String("lessons"),
+	)
+	defer span.End()
+
 	var lessons []Lesson
 	if err := s.db.WithContext(ctx).Where("is_published = ?", true).Find(&lessons).Error; err != nil {
+		tracing.RecordError(span, err)
 		return nil, err
 	}
 	return lessons, nil
@@ -141,8 +167,15 @@ func (s *Service) ListPublishedLessons(ctx context.Context) ([]Lesson, error) {
 
 // ListAllLessons returns all lessons (both published and unpublished).
 func (s *Service) ListAllLessons(ctx context.Context) ([]Lesson, error) {
+	ctx, span := tracing.StartSpan(ctx, "study.ListAllLessons",
+		tracing.AttrDBOperation.String("SELECT"),
+		tracing.AttrDBTable.String("lessons"),
+	)
+	defer span.End()
+
 	var lessons []Lesson
 	if err := s.db.WithContext(ctx).Find(&lessons).Error; err != nil {
+		tracing.RecordError(span, err)
 		return nil, err
 	}
 	return lessons, nil

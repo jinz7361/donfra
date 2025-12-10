@@ -3,6 +3,9 @@ SHELL := /bin/zsh
 # Path to the compose file used for local development
 COMPOSE_FILE ?= infra/docker-compose.local.yml
 
+# Path to production compose file
+PROD_COMPOSE_FILE ?= infra/docker-compose.yml
+
 # UI Image Tag
 UI_IMAGE_TAG ?= 1.0.4
 
@@ -10,12 +13,15 @@ UI_IMAGE_TAG ?= 1.0.4
 DOCKER_COMPOSE ?= docker-compose
 
 DC = $(DOCKER_COMPOSE) -f $(COMPOSE_FILE)
+PROD = $(DOCKER_COMPOSE) -f $(PROD_COMPOSE_FILE)
 
 .PHONY: localdev-up localdev-down localdev-restart logs ps
 .PHONY: localdev-up-api localdev-down-api localdev-restart-api
 .PHONY: localdev-up-ws localdev-down-ws localdev-restart-ws
 .PHONY: localdev-up-db localdev-down-db localdev-restart-db
 .PHONY: localdev-up-ui localdev-down-ui localdev-restart-ui
+.PHONY: prod-up prod-down prod-restart prod-logs prod-ps
+.PHONY: jaeger-ui jaeger-logs jaeger-hash-password
 
 
 localdev-up:
@@ -87,3 +93,53 @@ docker-build-ui:
 docker-push-ui:
 	@echo "Pushing UI container to Docker Hub"
 	cd donfra-ui ; docker push doneowth/donfra-ui:$(UI_IMAGE_TAG)
+
+# ===== Production Commands =====
+
+prod-up:
+	@echo "Starting production stack using $(PROD_COMPOSE_FILE)"
+	$(PROD) up -d --build
+
+prod-down:
+	@echo "Stopping production stack"
+	$(PROD) down
+
+prod-restart:
+	@echo "Restarting production stack"
+	$(PROD) restart
+
+prod-logs:
+	@echo "Viewing production logs"
+	$(PROD) logs -f --tail=200
+
+prod-ps:
+	@echo "Listing production containers"
+	$(PROD) ps
+
+prod-restart-api:
+	@echo "Restarting production API container"
+	$(PROD) stop api && $(PROD) up --build -d api
+
+prod-restart-caddy:
+	@echo "Restarting production Caddy container"
+	$(PROD) restart caddy
+
+# ===== Jaeger Commands =====
+
+jaeger-ui:
+	@echo "Opening Jaeger UI in browser..."
+	@echo "Local: http://localhost:16686"
+	@echo "Production: https://donfra.dev/jaeger"
+
+jaeger-logs:
+	@echo "Viewing Jaeger logs (local dev)..."
+	$(DC) logs -f jaeger
+
+jaeger-logs-prod:
+	@echo "Viewing Jaeger logs (production)..."
+	$(PROD) logs -f jaeger
+
+jaeger-hash-password:
+	@echo "Generate password hash for Caddy Basic Auth:"
+	@echo "Enter your password when prompted:"
+	@docker run --rm -it caddy:2 caddy hash-password

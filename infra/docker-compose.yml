@@ -29,16 +29,18 @@ services:
     container_name: donfra-api
     environment:
       - ADDR=:8080
-      - PASSCODE=7777               
+      - PASSCODE=7777
       - ADMIN_PASS=7777
       - JWT_SECRET=don-secret
       - DATABASE_URL=postgres://donfra:arfnod@donfra-db:5432/donfra_study?sslmode=disable
+      - JAEGER_ENDPOINT=jaeger:4318
       # - CORS_ORIGIN=http://localhost
       # - BASE_URL=http://localhost
     expose:
-      - "8080"                
+      - "8080"
     depends_on:
       - donfra-db
+      - jaeger
     networks:
       - donfra
 
@@ -86,6 +88,20 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/seed_lessons.sql:/docker-entrypoint-initdb.d/seed_lessons.sql:ro
+    networks:
+      - donfra
+
+  # ===== Jaeger: Distributed Tracing =====
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: donfra-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+      - "14268:14268"  # Jaeger collector HTTP
     networks:
       - donfra
 

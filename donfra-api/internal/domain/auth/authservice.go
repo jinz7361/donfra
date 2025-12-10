@@ -41,7 +41,7 @@ func (s *AuthService) IssueAdminToken(pass string) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "admin",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(75 * time.Minute)),
 			Issuer:    "donfra-api",
 		},
 	}

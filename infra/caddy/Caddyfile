@@ -11,6 +11,12 @@ donfra.dev www.donfra.dev {
         reverse_proxy http://ws:6789
     }
 
+    # Jaeger UI (consider adding basic auth for production)
+    handle /jaeger/* {
+        uri strip_prefix /jaeger
+        reverse_proxy http://jaeger:16686
+    }
+
     reverse_proxy http://ui:3000
 }
 
