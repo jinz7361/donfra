@@ -10,7 +10,7 @@ import (
 )
 
 func (h *Handlers) AdminLogin(w http.ResponseWriter, r *http.Request) {
-	if h.auth == nil {
+	if h.authSvc == nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "auth service unavailable")
 		return
 	}
@@ -19,7 +19,7 @@ func (h *Handlers) AdminLogin(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	token, err := h.auth.IssueAdminToken(strings.TrimSpace(req.Password))
+	token, err := h.authSvc.IssueAdminToken(strings.TrimSpace(req.Password))
 	if err != nil {
 		httputil.WriteError(w, http.StatusUnauthorized, err.Error())
 		return

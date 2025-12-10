@@ -3,91 +3,22 @@ package study
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"gorm.io/gorm"
 
-	"donfra-api/internal/domain/auth"
 	"donfra-api/internal/pkg/tracing"
 )
 
-type Lister interface {
-	ListPublishedLessons(ctx context.Context) ([]Lesson, error)
-	ListAllLessons(ctx context.Context) ([]Lesson, error)
-}
-
-type Getter interface {
-	GetLessonBySlug(ctx context.Context, slug string) (*Lesson, error)
-}
-
-type LessonCreator interface {
-	CreateLesson(ctx context.Context, lesson *Lesson) (*Lesson, error)
-}
-
-type LessonUpdater interface {
-	UpdateLessonBySlug(ctx context.Context, slug string, updates map[string]interface{}) error
-}
-
-type LessonDeleter interface {
-	DeleteLessonBySlug(ctx context.Context, slug string) error
-}
-
 // Service implements CRUD operations for lessons.
 type Service struct {
-	db   *gorm.DB
-	auth *auth.AuthService
+	db *gorm.DB
 }
 
-func NewService(db *gorm.DB, auth *auth.AuthService) *Service {
-	return &Service{db: db, auth: auth}
+func NewService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
-// func (s *Service) Create(ctx context.Context, token string, lesson *Lesson) (*Lesson, error) {
-// 	if err := s.requireAdmin(token); err != nil {
-// 		return nil, err
-// 	}
-// 	if err := s.db.WithContext(ctx).Create(lesson).Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return lesson, nil
-// }
-
-func (s *Service) Update(ctx context.Context, token, slug string, updates *Lesson) (*Lesson, error) {
-	if err := s.requireAdmin(token); err != nil {
-		return nil, err
-	}
-
-	var lesson Lesson
-	if err := s.db.WithContext(ctx).Where("slug = ?", slug).First(&lesson).Error; err != nil {
-		return nil, err
-	}
-
-	lesson.Title = updates.Title
-	lesson.Markdown = updates.Markdown
-	lesson.Excalidraw = updates.Excalidraw
-	lesson.IsPublished = updates.IsPublished
-
-	if err := s.db.WithContext(ctx).Save(&lesson).Error; err != nil {
-		return nil, err
-	}
-	return &lesson, nil
-}
-
-func (s *Service) Delete(ctx context.Context, token, slug string) error {
-	if err := s.requireAdmin(token); err != nil {
-		return err
-	}
-	return s.db.WithContext(ctx).Where("slug = ?", slug).Delete(&Lesson{}).Error
-}
-
-func (s *Service) Load(ctx context.Context, slug string) (*Lesson, error) {
-	var lesson Lesson
-	if err := s.db.WithContext(ctx).Where("slug = ?", slug).First(&lesson).Error; err != nil {
-		return nil, err
-	}
-	return &lesson, nil
-}
-
+// GetLessonBySlug retrieves a lesson by its slug.
 func (s *Service) GetLessonBySlug(ctx context.Context, slug string) (*Lesson, error) {
 	ctx, span := tracing.StartSpan(ctx, "study.GetLessonBySlug",
 		tracing.AttrDBOperation.String("SELECT"),
@@ -179,21 +110,4 @@ func (s *Service) ListAllLessons(ctx context.Context) ([]Lesson, error) {
 		return nil, err
 	}
 	return lessons, nil
-}
-
-func (s *Service) requireAdmin(token string) error {
-	if s.auth == nil {
-		return errors.New("auth service not configured")
-	}
-	if strings.TrimSpace(token) == "" {
-		return errors.New("missing token")
-	}
-	claims, err := s.auth.Validate(token)
-	if err != nil {
-		return err
-	}
-	if claims.Subject != "admin" {
-		return errors.New("unauthorized")
-	}
-	return nil
 }

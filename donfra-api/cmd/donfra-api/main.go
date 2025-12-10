@@ -40,7 +40,7 @@ func main() {
 	store := room.NewMemoryStore()
 	roomSvc := room.NewService(store, cfg.Passcode, cfg.BaseURL)
 	authSvc := auth.NewAuthService(cfg.AdminPass, cfg.JWTSecret)
-	studySvc := study.NewService(conn, authSvc)
+	studySvc := study.NewService(conn)
 	r := router.New(cfg, roomSvc, studySvc, authSvc)
 
 	srv := &http.Server{
