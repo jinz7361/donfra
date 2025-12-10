@@ -4,8 +4,8 @@
 ![Coverage](https://img.shields.io/badge/coverage-60%25-yellow.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-> 教育协作平台，支持实时代码编辑和 Python 执行
-
+> 个人教育分享平台，支持实时代码编辑和 Python 执行
+![Demo](https://donfra.dev)
 Educational/career mentorship platform with real-time collaborative coding capabilities, Python execution, and interactive whiteboarding.
 
 ## 📊 测试状态 (Test Status)
