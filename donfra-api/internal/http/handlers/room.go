@@ -7,6 +7,7 @@ import (
 
 	"donfra-api/internal/domain/room"
 	"donfra-api/internal/pkg/httputil"
+	"donfra-api/internal/pkg/metrics"
 )
 
 func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
@@ -20,6 +21,12 @@ func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusConflict, err.Error())
 		return
 	}
+
+	// Record metric
+	if metrics.RoomOpened != nil {
+		metrics.RoomOpened.Add(r.Context(), 1)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, room.InitResponse{InviteURL: url, Token: token})
 }
 
@@ -62,6 +69,12 @@ func (h *Handlers) RoomJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{Name: "room_access", Value: "1", Path: "/", MaxAge: 86400, SameSite: http.SameSiteLaxMode, HttpOnly: false, Secure: false})
+
+	// Record metric
+	if metrics.RoomJoins != nil {
+		metrics.RoomJoins.Add(r.Context(), 1)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, room.JoinResponse{Success: true})
 }
 
@@ -72,6 +85,12 @@ func (h *Handlers) RoomClose(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to close room")
 		return
 	}
+
+	// Record metric
+	if metrics.RoomClosed != nil {
+		metrics.RoomClosed.Add(ctx, 1)
+	}
+
 	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{Open: h.roomSvc.IsOpen(ctx)})
 }
 

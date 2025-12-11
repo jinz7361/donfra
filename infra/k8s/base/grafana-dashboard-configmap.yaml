@@ -1,0 +1,276 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: donfra
+data:
+  donfra-overview.json: |
+    {
+      "title": "Donfra Platform Overview",
+      "tags": ["donfra", "overview"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 0,
+      "refresh": "5s",
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "panels": [
+          {
+            "id": 1,
+            "title": "Room Opens Total",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(donfra_room_opened_total)",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Room Closes Total",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(donfra_room_closed_total)",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "blue"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 3,
+            "title": "Total Room Joins",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(donfra_room_joins_total)",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "purple"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 4,
+            "title": "Code Executions Total",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+            "targets": [
+              {
+                "expr": "sum(donfra_code_executions_total)",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "orange"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 5,
+            "title": "Room Operations Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+            "targets": [
+              {
+                "expr": "rate(donfra_room_opened_total[5m])",
+                "legendFormat": "Opens/sec",
+                "refId": "A"
+              },
+              {
+                "expr": "rate(donfra_room_closed_total[5m])",
+                "legendFormat": "Closes/sec",
+                "refId": "B"
+              },
+              {
+                "expr": "rate(donfra_room_joins_total[5m])",
+                "legendFormat": "Joins/sec",
+                "refId": "C"
+              }
+            ],
+            "yaxes": [
+              {"format": "short", "label": "ops/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Code Execution Rate",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+            "targets": [
+              {
+                "expr": "rate(donfra_code_executions_total[5m])",
+                "legendFormat": "Executions/sec",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {"format": "short", "label": "executions/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 7,
+            "title": "HTTP Request Rate by Endpoint",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+            "targets": [
+              {
+                "expr": "sum by (http_target) (rate(donfra_http_requests_total[5m]))",
+                "legendFormat": "{{http_target}}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {"format": "reqps", "label": "requests/sec"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 8,
+            "title": "HTTP Request Duration (P95)",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum by (le, http_target) (rate(donfra_http_server_request_duration_seconds_bucket[5m])))",
+                "legendFormat": "{{http_target}} p95",
+                "refId": "A"
+              },
+              {
+                "expr": "histogram_quantile(0.50, sum by (le, http_target) (rate(donfra_http_server_request_duration_seconds_bucket[5m])))",
+                "legendFormat": "{{http_target}} p50",
+                "refId": "B"
+              }
+            ],
+            "yaxes": [
+              {"format": "s", "label": "duration"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 9,
+            "title": "Lessons Created Total",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 8, "x": 0, "y": 20},
+            "targets": [
+              {
+                "expr": "sum(donfra_lessons_created_total)",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "yellow"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 10,
+            "title": "API Pod Count",
+            "type": "stat",
+            "gridPos": {"h": 4, "w": 8, "x": 8, "y": 20},
+            "targets": [
+              {
+                "expr": "count(up{job=\"api\"})",
+                "refId": "A"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 11,
+            "title": "Pod CPU Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+            "targets": [
+              {
+                "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"donfra\"}[5m]))",
+                "legendFormat": "{{pod}}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {"format": "percentunit", "label": "CPU"},
+              {"format": "short"}
+            ]
+          },
+          {
+            "id": 12,
+            "title": "Pod Memory Usage",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+            "targets": [
+              {
+                "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"donfra\"})",
+                "legendFormat": "{{pod}}",
+                "refId": "A"
+              }
+            ],
+            "yaxes": [
+              {"format": "bytes", "label": "Memory"},
+              {"format": "short"}
+            ]
+          }
+        ]
+    }

@@ -9,6 +9,7 @@ import (
 
 	"donfra-api/internal/domain/run"
 	"donfra-api/internal/pkg/httputil"
+	"donfra-api/internal/pkg/metrics"
 )
 
 func (h *Handlers) RunCode(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +28,12 @@ func (h *Handlers) RunCode(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+
+	// Record metric
+	if metrics.CodeExecutions != nil {
+		metrics.CodeExecutions.Add(ctx, 1)
+	}
+
 	result := run.RunPython(ctx, req.Code)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {

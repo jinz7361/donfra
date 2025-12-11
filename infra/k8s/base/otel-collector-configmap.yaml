@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: donfra
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      # OTLP receiver for traces, metrics, and logs
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+    processors:
+      # Batch processor for better performance
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+      # Memory limiter to prevent OOM
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+        spike_limit_mib: 128
+
+      # Add resource attributes
+      resource:
+        attributes:
+          - key: service.namespace
+            value: donfra
+            action: insert
+
+    exporters:
+      # Export traces to Jaeger (HTTP only)
+      otlphttp/jaeger:
+        endpoint: http://jaeger:4318
+        tls:
+          insecure: true
+
+      # Export metrics in Prometheus format for scraping
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: donfra
+
+      # Export logs to Loki
+      loki:
+        endpoint: http://loki:3100/loki/api/v1/push
+        tls:
+          insecure: true
+
+      # Debug exporter for debugging
+      debug:
+        verbosity: detailed
+
+    service:
+      pipelines:
+        # Traces pipeline
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [otlphttp/jaeger, debug]
+
+        # Metrics pipeline
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [prometheus, debug]
+
+        # Logs pipeline
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resource]
+          exporters: [loki, debug]
+
+      # Telemetry for the collector itself
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888

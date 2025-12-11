@@ -12,6 +12,7 @@ import (
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/http/middleware"
 	"donfra-api/internal/pkg/httputil"
+	"donfra-api/internal/pkg/metrics"
 	"donfra-api/internal/pkg/tracing"
 )
 
@@ -149,6 +150,11 @@ func (h *Handlers) CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to create lesson")
 		return
+	}
+
+	// Record metric
+	if metrics.LessonsCreated != nil {
+		metrics.LessonsCreated.Add(ctx, 1)
 	}
 
 	_, jsonSpan := tracing.StartSpan(ctx, "handler.SerializeJSON")

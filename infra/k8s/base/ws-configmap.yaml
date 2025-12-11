@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ws-config
+  namespace: donfra
+data:
+  ROOM_UPDATE_URL: "http://api:8080/api/room/update-people"
+  PORT: "6789"

@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: donfra-ingress
+  namespace: donfra
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # WebSocket support for /yjs and /ws paths
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "ws"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: donfra.local
+    http:
+      paths:
+      # API routes - no rewrite, pass through as-is
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 8080
+      # WebSocket routes for Yjs
+      - path: /yjs
+        pathType: Prefix
+        backend:
+          service:
+            name: ws
+            port:
+              number: 6789
+      # WebSocket routes (alternative path)
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: ws
+            port:
+              number: 6789
+      # Jaeger UI (optional, for debugging)
+      - path: /jaeger
+        pathType: Prefix
+        backend:
+          service:
+            name: jaeger
+            port:
+              number: 16686
+      # Default route - UI (must be last)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ui
+            port:
+              number: 3000

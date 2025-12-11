@@ -23,6 +23,7 @@ PROD = $(DOCKER_COMPOSE) -f $(PROD_COMPOSE_FILE)
 .PHONY: localdev-up-redis localdev-restart-redis localdev-logs-redis
 .PHONY: prod-up prod-down prod-restart prod-logs prod-ps
 .PHONY: jaeger-ui jaeger-logs jaeger-hash-password
+.PHONY: k8s-setup k8s-teardown k8s-rebuild k8s-logs k8s-status k8s-portforward-db k8s-portforward-jaeger
 
 
 localdev-up:
@@ -156,3 +157,54 @@ jaeger-hash-password:
 	@echo "Generate password hash for Caddy Basic Auth:"
 	@echo "Enter your password when prompted:"
 	@docker run --rm -it caddy:2 caddy hash-password
+
+# ===== Kubernetes Commands =====
+
+k8s-setup:
+	@echo "Setting up Donfra on Kind cluster..."
+	cd infra/k8s && ./setup-kind.sh
+
+k8s-teardown:
+	@echo "Tearing down Kind cluster..."
+	cd infra/k8s && ./teardown-kind.sh
+
+k8s-rebuild:
+	@echo "Rebuilding and reloading Docker images..."
+	cd infra/k8s && ./rebuild-images.sh
+
+k8s-logs:
+	@echo "Usage: make k8s-logs SERVICE=<api|ws|ui|postgres|redis|jaeger>"
+	@if [ -z "$(SERVICE)" ]; then \
+		echo "Error: SERVICE parameter is required"; \
+		echo "Example: make k8s-logs SERVICE=api"; \
+		exit 1; \
+	fi
+	cd infra/k8s && ./logs.sh $(SERVICE)
+
+k8s-status:
+	@echo "Checking Kubernetes cluster status..."
+	@kubectl get pods -n donfra
+	@echo ""
+	@kubectl get services -n donfra
+	@echo ""
+	@kubectl get ingress -n donfra
+
+k8s-portforward-db:
+	@echo "Port forwarding PostgreSQL to localhost:5432..."
+	kubectl port-forward -n donfra svc/postgres 5432:5432
+
+k8s-portforward-jaeger:
+	@echo "Port forwarding Jaeger UI to localhost:16686..."
+	kubectl port-forward -n donfra svc/jaeger 16686:16686
+
+k8s-restart-api:
+	@echo "Restarting API deployment..."
+	kubectl rollout restart deployment/api -n donfra
+
+k8s-restart-ws:
+	@echo "Restarting WebSocket deployment..."
+	kubectl rollout restart deployment/ws -n donfra
+
+k8s-restart-ui:
+	@echo "Restarting UI deployment..."
+	kubectl rollout restart deployment/ui -n donfra

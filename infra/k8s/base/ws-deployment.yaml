@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws
+  namespace: donfra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ws
+  template:
+    metadata:
+      labels:
+        app: ws
+    spec:
+      containers:
+      - name: ws
+        image: donfra-ws:dev
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6789
+          name: websocket
+        envFrom:
+        - configMapRef:
+            name: ws-config
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

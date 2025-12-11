@@ -1,0 +1,75 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: donfra-routes
+  namespace: donfra
+spec:
+  parentRefs:
+  - name: donfra-gateway
+
+  hostnames:
+  - "donfra.local"
+
+  rules:
+  # API routes - /api/*
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    backendRefs:
+    - name: api
+      port: 8080
+
+  # WebSocket routes - /yjs/*
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /yjs
+    backendRefs:
+    - name: ws
+      port: 6789
+
+  # WebSocket routes - /ws/*
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /ws
+    backendRefs:
+    - name: ws
+      port: 6789
+
+  # Jaeger UI - /jaeger/*
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /jaeger
+    backendRefs:
+    - name: jaeger
+      port: 16686
+
+  # Grafana - /grafana/* (for future observability stack)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /grafana
+    backendRefs:
+    - name: grafana
+      port: 3000
+
+  # Prometheus - /prometheus/* (for future observability stack)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /prometheus
+    backendRefs:
+    - name: prometheus
+      port: 9090
+
+  # Default route - UI (must be last)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: ui
+      port: 3000

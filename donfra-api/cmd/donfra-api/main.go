@@ -15,6 +15,7 @@ import (
 	"donfra-api/internal/domain/room"
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/http/router"
+	"donfra-api/internal/pkg/metrics"
 	"donfra-api/internal/pkg/tracing"
 
 	"github.com/redis/go-redis/v9"
@@ -23,14 +24,25 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Initialize Jaeger tracing
-	shutdown, err := tracing.InitTracer("donfra-api", cfg.JaegerEndpoint)
+	// Initialize OpenTelemetry tracing
+	shutdownTracer, err := tracing.InitTracer("donfra-api", cfg.JaegerEndpoint)
 	if err != nil {
 		log.Fatalf("failed to initialize tracer: %v", err)
 	}
 	defer func() {
-		if err := shutdown(context.Background()); err != nil {
+		if err := shutdownTracer(context.Background()); err != nil {
 			log.Printf("failed to shutdown tracer: %v", err)
+		}
+	}()
+
+	// Initialize OpenTelemetry metrics
+	shutdownMetrics, err := metrics.InitMetrics("donfra-api", cfg.JaegerEndpoint)
+	if err != nil {
+		log.Fatalf("failed to initialize metrics: %v", err)
+	}
+	defer func() {
+		if err := shutdownMetrics(context.Background()); err != nil {
+			log.Printf("failed to shutdown metrics: %v", err)
 		}
 	}()
 
