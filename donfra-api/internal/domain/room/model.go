@@ -1,7 +1,7 @@
 package room
 
-// State represents the current state of the room.
-type State struct {
+// RoomState represents the current state of the room.
+type RoomState struct {
 	Open        bool
 	InviteToken string
 	Headcount   int

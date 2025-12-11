@@ -11,6 +11,8 @@ type Config struct {
 	JWTSecret      string
 	DatabaseURL    string
 	JaegerEndpoint string
+	RedisAddr      string
+	UseRedis       bool
 }
 
 func getenv(k, def string) string {
@@ -30,5 +32,7 @@ func Load() Config {
 		JWTSecret:      getenv("JWT_SECRET", "donfra-secret"),
 		DatabaseURL:    getenv("DATABASE_URL", "postgres://donfra:arfnod@localhost:5432/donfra_study?sslmode=disable"),
 		JaegerEndpoint: getenv("JAEGER_ENDPOINT", ""), // e.g., "jaeger:4318" or "localhost:4318"
+		RedisAddr:      getenv("REDIS_ADDR", ""),      // e.g., "redis:6379" or "localhost:6379"
+		UseRedis:       getenv("USE_REDIS", "false") == "true",
 	}
 }

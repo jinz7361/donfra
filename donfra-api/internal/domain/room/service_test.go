@@ -1,16 +1,18 @@
 package room_test
 
 import (
+	"context"
 	"testing"
 
 	"donfra-api/internal/domain/room"
 )
 
 func TestRoomService_Init_Success(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	url, token, err := svc.Init("7777", 10)
+	url, token, err := svc.Init(ctx, "7777", 10)
 
 	// 验证：成功开启
 	if err != nil {
@@ -29,221 +31,189 @@ func TestRoomService_Init_Success(t *testing.T) {
 	}
 
 	// 验证：房间状态正确
-	if !svc.IsOpen() {
+	if !svc.IsOpen(ctx) {
 		t.Error("expected room to be open")
 	}
 
-	if svc.Limit() != 10 {
-		t.Errorf("expected limit to be 10, got %d", svc.Limit())
+	if svc.Limit(ctx) != 10 {
+		t.Errorf("expected limit to be 10, got %d", svc.Limit(ctx))
 	}
 }
 
 func TestRoomService_Init_WrongPasscode(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	_, _, err := svc.Init("wrong", 10)
+	_, _, err := svc.Init(ctx, "wrong", 10)
 
 	// 验证：返回错误
 	if err == nil {
 		t.Error("expected error for wrong passcode")
 	}
 
-	if err.Error() != "invalid passcode" {
-		t.Errorf("expected 'invalid passcode' error, got '%s'", err.Error())
+	// 验证：错误消息正确
+	expectedMsg := "invalid passcode"
+	if err.Error() != expectedMsg {
+		t.Errorf("expected error message '%s', got '%s'", expectedMsg, err.Error())
 	}
 
 	// 验证：房间未开启
-	if svc.IsOpen() {
+	if svc.IsOpen(ctx) {
 		t.Error("expected room to remain closed")
 	}
 }
 
-func TestRoomService_Init_RoomAlreadyOpen(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+func TestRoomService_Init_AlreadyOpen(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	// 第一次开启
-	svc.Init("7777", 10)
+	// 第一次成功开启
+	_, _, err := svc.Init(ctx, "7777", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	// 尝试再次开启
-	_, _, err := svc.Init("7777", 10)
-
-	// 验证：返回错误
+	// 第二次尝试开启应该失败
+	_, _, err = svc.Init(ctx, "7777", 10)
 	if err == nil {
 		t.Error("expected error when room already open")
 	}
 
-	if err.Error() != "room already open" {
-		t.Errorf("expected 'room already open', got '%s'", err.Error())
+	expectedMsg := "room already open"
+	if err.Error() != expectedMsg {
+		t.Errorf("expected error message '%s', got '%s'", expectedMsg, err.Error())
 	}
 }
 
-func TestRoomService_Validate_ValidToken(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+func TestRoomService_Init_DefaultLimit(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	// 开启房间并获取 token
-	_, token, _ := svc.Init("7777", 10)
+	// 传入 0 应该使用默认值 2
+	_, _, err := svc.Init(ctx, "7777", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	// 验证 token
-	if !svc.Validate(token) {
-		t.Error("expected token to be valid")
+	if svc.Limit(ctx) != 2 {
+		t.Errorf("expected default limit to be 2, got %d", svc.Limit(ctx))
 	}
 }
 
-func TestRoomService_Validate_InvalidToken(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+func TestRoomService_Close(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	svc.Init("7777", 10)
-
-	// 验证无效 token
-	if svc.Validate("wrong-token") {
-		t.Error("expected invalid token to fail validation")
+	// 开启房间
+	_, _, err := svc.Init(ctx, "7777", 10)
+	if err != nil {
+		t.Fatal(err)
 	}
-}
 
-func TestRoomService_Validate_RoomClosed(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
-
-	_, token, _ := svc.Init("7777", 10)
+	if !svc.IsOpen(ctx) {
+		t.Error("expected room to be open")
+	}
 
 	// 关闭房间
-	svc.Close()
-
-	// 验证：关闭后 token 无效
-	if svc.Validate(token) {
-		t.Error("expected token to be invalid after room closed")
-	}
-}
-
-func TestRoomService_Close_Success(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
-
-	svc.Init("7777", 10)
-
-	err := svc.Close()
-
-	// 验证：成功关闭
+	err = svc.Close(ctx)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
 	// 验证：房间已关闭
-	if svc.IsOpen() {
+	if svc.IsOpen(ctx) {
 		t.Error("expected room to be closed")
 	}
 
-	// 验证：invite link 清空
-	if svc.InviteLink() != "" {
-		t.Error("expected invite link to be empty")
+	// 验证：状态已清空
+	if svc.InviteLink(ctx) != "" {
+		t.Error("expected invite link to be empty after close")
 	}
 }
 
-func TestRoomService_UpdateHeadcount_Success(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+func TestRoomService_Validate(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	svc.Init("7777", 10)
+	// 开启房间
+	_, token, err := svc.Init(ctx, "7777", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err := svc.UpdateHeadcount(5)
+	// 验证：正确的 token
+	if !svc.Validate(ctx, token) {
+		t.Error("expected token to be valid")
+	}
 
-	// 验证：更新成功
+	// 验证：错误的 token
+	if svc.Validate(ctx, "wrong_token") {
+		t.Error("expected wrong token to be invalid")
+	}
+
+	// 关闭房间后 token 应该无效
+	svc.Close(ctx)
+	if svc.Validate(ctx, token) {
+		t.Error("expected token to be invalid after room closed")
+	}
+}
+
+func TestRoomService_UpdateHeadcount(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
+
+	// 开启房间
+	_, _, err := svc.Init(ctx, "7777", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 初始人数为 0
+	if svc.Headcount(ctx) != 0 {
+		t.Errorf("expected initial headcount to be 0, got %d", svc.Headcount(ctx))
+	}
+
+	// 更新人数
+	err = svc.UpdateHeadcount(ctx, 5)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	// 验证：人数正确
-	if svc.Headcount() != 5 {
-		t.Errorf("expected headcount to be 5, got %d", svc.Headcount())
+	if svc.Headcount(ctx) != 5 {
+		t.Errorf("expected headcount to be 5, got %d", svc.Headcount(ctx))
 	}
 }
 
-func TestRoomService_UpdateHeadcount_RoomClosed(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
+func TestRoomService_InviteLink(t *testing.T) {
+	repo := room.NewMemoryRepository()
+	svc := room.NewService(repo, "7777", "http://localhost:3000")
+	ctx := context.Background()
 
-	// 房间未开启时更新人数
-	err := svc.UpdateHeadcount(5)
+	// 房间未开启时，invite link 应该为空
+	if svc.InviteLink(ctx) != "" {
+		t.Error("expected invite link to be empty when room is closed")
+	}
 
-	// 注意：当前实现允许关闭房间时更新人数
-	// 这可能是设计决策，不一定是 bug
+	// 开启房间
+	url, token, err := svc.Init(ctx, "7777", 10)
 	if err != nil {
-		t.Logf("Room allows headcount update when closed (returns error: %v)", err)
-	} else {
-		t.Log("Room allows headcount update even when closed")
-	}
-}
-
-func TestRoomService_InviteLink_Format(t *testing.T) {
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://example.com")
-
-	_, token, _ := svc.Init("7777", 10)
-
-	link := svc.InviteLink()
-
-	// 验证：URL 格式正确（使用 invite 参数，不包含 role）
-	expected := "http://example.com/coding?invite=" + token
-	if link != expected {
-		t.Errorf("expected link '%s', got '%s'", expected, link)
-	}
-}
-
-func TestRoomService_LifecycleFlow(t *testing.T) {
-	// 完整的生命周期测试
-	store := room.NewMemoryStore()
-	svc := room.NewService(store, "7777", "http://localhost:3000")
-
-	// 1. 初始状态：关闭
-	if svc.IsOpen() {
-		t.Error("room should be closed initially")
+		t.Fatal(err)
 	}
 
-	// 2. 开启房间
-	url, token, err := svc.Init("7777", 10)
-	if err != nil {
-		t.Fatalf("failed to init room: %v", err)
+	// 验证：invite link 格式正确
+	expectedLink := "http://localhost:3000/coding?invite=" + token + "&role=agent"
+	if svc.InviteLink(ctx) != expectedLink {
+		t.Errorf("expected invite link '%s', got '%s'", expectedLink, svc.InviteLink(ctx))
 	}
 
-	// 3. 验证开启状态
-	if !svc.IsOpen() {
-		t.Error("room should be open after init")
-	}
-
-	// 4. 验证 token 有效
-	if !svc.Validate(token) {
-		t.Error("token should be valid")
-	}
-
-	// 5. 更新人数
-	svc.UpdateHeadcount(3)
-	if svc.Headcount() != 3 {
-		t.Errorf("expected headcount 3, got %d", svc.Headcount())
-	}
-
-	// 6. 关闭房间
-	svc.Close()
-	if svc.IsOpen() {
-		t.Error("room should be closed")
-	}
-
-	// 7. 验证 token 无效
-	if svc.Validate(token) {
-		t.Error("token should be invalid after close")
-	}
-
-	// 8. 验证 invite URL 清空
-	if svc.InviteLink() != "" {
-		t.Error("invite link should be empty after close")
-	}
-
-	// 验证 URL 格式（从之前返回的值）
-	expectedURL := "http://localhost:3000/coding?invite=" + token + "&role=agent"
-	if url != expectedURL {
-		t.Errorf("expected URL '%s', got '%s'", expectedURL, url)
+	// 验证：与 Init 返回的 URL 一致
+	if svc.InviteLink(ctx) != url {
+		t.Error("expected invite link to match URL returned by Init")
 	}
 }

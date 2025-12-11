@@ -12,7 +12,7 @@ import (
 )
 
 func (h *Handlers) RunCode(w http.ResponseWriter, r *http.Request) {
-	if !h.roomSvc.IsOpen() {
+	if !h.roomSvc.IsOpen(r.Context()) {
 		httputil.WriteError(w, http.StatusForbidden, "room is not open")
 		return
 	}

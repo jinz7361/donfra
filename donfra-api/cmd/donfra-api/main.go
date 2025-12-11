@@ -16,6 +16,8 @@ import (
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/http/router"
 	"donfra-api/internal/pkg/tracing"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -37,8 +39,24 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	store := room.NewMemoryStore()
-	roomSvc := room.NewService(store, cfg.Passcode, cfg.BaseURL)
+	// Initialize room repository (Redis or Memory)
+	var roomRepo room.Repository
+	if cfg.UseRedis && cfg.RedisAddr != "" {
+		redisClient := redis.NewClient(&redis.Options{
+			Addr: cfg.RedisAddr,
+		})
+		// Test Redis connection
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			log.Fatalf("failed to connect to Redis at %s: %v", cfg.RedisAddr, err)
+		}
+		roomRepo = room.NewRedisRepository(redisClient)
+		log.Printf("[donfra-api] using Redis repository at %s", cfg.RedisAddr)
+	} else {
+		roomRepo = room.NewMemoryRepository()
+		log.Println("[donfra-api] using in-memory repository")
+	}
+
+	roomSvc := room.NewService(roomRepo, cfg.Passcode, cfg.BaseURL)
 	authSvc := auth.NewAuthService(cfg.AdminPass, cfg.JWTSecret)
 	studySvc := study.NewService(conn)
 	r := router.New(cfg, roomSvc, studySvc, authSvc)

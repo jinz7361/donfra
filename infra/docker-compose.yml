@@ -34,6 +34,8 @@ services:
       - JWT_SECRET=don-secret
       - DATABASE_URL=postgres://donfra:arfnod@donfra-db:5432/donfra_study?sslmode=disable
       - JAEGER_ENDPOINT=jaeger:4318
+      - REDIS_ADDR=redis:6379
+      - USE_REDIS=true  # Use Redis in production for multi-instance support
       # - CORS_ORIGIN=http://localhost
       # - BASE_URL=http://localhost
     expose:
@@ -41,6 +43,7 @@ services:
     depends_on:
       - donfra-db
       - jaeger
+      - redis
     networks:
       - donfra
 
@@ -105,6 +108,24 @@ services:
     networks:
       - donfra
 
+  # ===== Redis: Shared State Store =====
+  redis:
+    image: redis:7-alpine
+    container_name: donfra-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - donfra
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 networks:
   donfra:
     driver: bridge
@@ -113,3 +134,4 @@ volumes:
   caddy_data: {}
   caddy_config: {}
   pgdata: {}
+  redis_data: {}

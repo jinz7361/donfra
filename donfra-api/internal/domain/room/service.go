@@ -1,60 +1,163 @@
 package room
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 )
 
+// Service handles room business logic (validation, token generation, URL building).
+// It delegates data persistence to Repository.
 type Service struct {
-	store    Store
+	repo     Repository
 	passcode string
 	baseURL  string
 }
 
-func NewService(store Store, passcode, baseURL string) *Service {
-	return &Service{store: store, passcode: passcode, baseURL: baseURL}
+// NewService creates a new room service with the given repository and configuration.
+func NewService(repo Repository, passcode, baseURL string) *Service {
+	return &Service{
+		repo:     repo,
+		passcode: passcode,
+		baseURL:  baseURL,
+	}
 }
 
-func (s *Service) Init(pass string, size int) (string, string, error) {
+// Init opens the room with the given passcode and size limit.
+// Returns the invite URL and token on success.
+func (s *Service) Init(ctx context.Context, pass string, size int) (inviteURL string, token string, err error) {
+	// Validate passcode
 	if strings.TrimSpace(pass) != s.passcode {
 		return "", "", errors.New("invalid passcode")
 	}
-	if s.store.IsOpen() {
+
+	// Check if room is already open
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get room state: %w", err)
+	}
+
+	if state.Open {
 		return "", "", errors.New("room already open")
 	}
+
+	// Set default limit
 	limit := size
 	if limit <= 0 {
 		limit = 2
 	}
-	b := make([]byte, 24)
-	rand.Read(b)
-	token := base64.RawURLEncoding.EncodeToString(b)
-	s.store.SetOpen(token, limit)
-	inviteURL := "/coding?invite=" + token + "&role=agent"
 
-	return strings.TrimRight(s.baseURL, "/") + inviteURL, token, nil
+	// Generate cryptographically secure invite token
+	token, err = s.generateToken()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Create new state
+	newState := &RoomState{
+		Open:        true,
+		InviteToken: token,
+		Headcount:   0,
+		Limit:       limit,
+	}
+
+	// Persist state
+	if err := s.repo.SaveState(ctx, newState); err != nil {
+		return "", "", fmt.Errorf("failed to save room state: %w", err)
+	}
+
+	// Build invite URL
+	inviteURL = s.buildInviteURL(token)
+
+	return inviteURL, token, nil
 }
 
-func (s *Service) IsOpen() bool { return s.store.IsOpen() }
-func (s *Service) InviteLink() string {
-	if !s.store.IsOpen() {
+// IsOpen checks if the room is currently open.
+func (s *Service) IsOpen(ctx context.Context) bool {
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return false
+	}
+	return state.Open
+}
+
+// GetStatus returns the current room status.
+func (s *Service) GetStatus(ctx context.Context) (*RoomState, error) {
+	return s.repo.GetState(ctx)
+}
+
+// InviteLink returns the full invite URL if room is open, empty string otherwise.
+func (s *Service) InviteLink(ctx context.Context) string {
+	state, err := s.repo.GetState(ctx)
+	if err != nil || !state.Open {
 		return ""
 	}
-	return strings.TrimRight(s.baseURL, "/") + "/coding?invite=" + s.store.InviteLink()
-}
-func (s *Service) Validate(t string) bool { return s.store.Validate(strings.TrimSpace(t)) }
-func (s *Service) Close() error           { return s.store.Close() }
-
-func (s *Service) UpdateHeadcount(n int) error {
-	return s.store.UpdateHeadcount(n)
+	return s.buildInviteURL(state.InviteToken)
 }
 
-func (s *Service) Headcount() int {
-	return s.store.Headcount()
+// Validate checks if the given token matches the room's invite token and room is open.
+func (s *Service) Validate(ctx context.Context, token string) bool {
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return false
+	}
+
+	return state.Open && strings.TrimSpace(token) == state.InviteToken
 }
 
-func (s *Service) Limit() int {
-	return s.store.Limit()
+// Close closes the room and clears all state.
+func (s *Service) Close(ctx context.Context) error {
+	return s.repo.Clear(ctx)
+}
+
+// UpdateHeadcount updates the current number of participants in the room.
+func (s *Service) UpdateHeadcount(ctx context.Context, count int) error {
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get room state: %w", err)
+	}
+
+	state.Headcount = count
+
+	if err := s.repo.SaveState(ctx, state); err != nil {
+		return fmt.Errorf("failed to update headcount: %w", err)
+	}
+
+	return nil
+}
+
+// Headcount returns the current number of participants.
+func (s *Service) Headcount(ctx context.Context) int {
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return 0
+	}
+	return state.Headcount
+}
+
+// Limit returns the maximum number of participants allowed.
+func (s *Service) Limit(ctx context.Context) int {
+	state, err := s.repo.GetState(ctx)
+	if err != nil {
+		return 0
+	}
+	return state.Limit
+}
+
+// generateToken generates a cryptographically secure random token.
+func (s *Service) generateToken() (string, error) {
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+// buildInviteURL constructs the full invite URL with token and role.
+func (s *Service) buildInviteURL(token string) string {
+	baseURL := strings.TrimRight(s.baseURL, "/")
+	return fmt.Sprintf("%s/coding?invite=%s&role=agent", baseURL, token)
 }

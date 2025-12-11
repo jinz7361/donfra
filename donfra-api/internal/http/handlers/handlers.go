@@ -16,14 +16,14 @@ type Handlers struct {
 
 // RoomService defines the interface for room operations.
 type RoomService interface {
-	Init(passcode string, size int) (inviteURL string, token string, err error)
-	IsOpen() bool
-	InviteLink() string
-	Headcount() int
-	Limit() int
-	Validate(token string) bool
-	Close() error
-	UpdateHeadcount(count int) error
+	Init(ctx context.Context, passcode string, size int) (inviteURL string, token string, err error)
+	IsOpen(ctx context.Context) bool
+	InviteLink(ctx context.Context) string
+	Headcount(ctx context.Context) int
+	Limit(ctx context.Context) int
+	Validate(ctx context.Context, token string) bool
+	Close(ctx context.Context) error
+	UpdateHeadcount(ctx context.Context, count int) error
 }
 
 // StudyService defines the interface for lesson operations.

@@ -20,6 +20,7 @@ PROD = $(DOCKER_COMPOSE) -f $(PROD_COMPOSE_FILE)
 .PHONY: localdev-up-ws localdev-down-ws localdev-restart-ws
 .PHONY: localdev-up-db localdev-down-db localdev-restart-db
 .PHONY: localdev-up-ui localdev-down-ui localdev-restart-ui
+.PHONY: localdev-up-redis localdev-restart-redis localdev-logs-redis
 .PHONY: prod-up prod-down prod-restart prod-logs prod-ps
 .PHONY: jaeger-ui jaeger-logs jaeger-hash-password
 
@@ -85,6 +86,18 @@ localdev-up-ui:
 	$(DC) up -d --build ui
 
 localdev-restart-ui: localdev-down-ui localdev-up-ui
+
+localdev-up-redis:
+	@echo "Starting Redis container"
+	$(DC) up -d redis
+
+localdev-restart-redis:
+	@echo "Restarting Redis container"
+	$(DC) restart redis
+
+localdev-logs-redis:
+	@echo "Viewing Redis logs"
+	$(DC) logs -f redis
 
 docker-build-ui:
 	@echo "Building UI container"

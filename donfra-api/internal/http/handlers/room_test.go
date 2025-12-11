@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,68 +15,68 @@ import (
 
 // MockRoomService for testing
 type MockRoomService struct {
-	InitFunc            func(passcode string, size int) (inviteURL string, token string, err error)
-	IsOpenFunc          func() bool
-	InviteLinkFunc      func() string
-	HeadcountFunc       func() int
-	LimitFunc           func() int
-	ValidateFunc        func(token string) bool
-	CloseFunc           func() error
-	UpdateHeadcountFunc func(count int) error
+	InitFunc            func(ctx context.Context, passcode string, size int) (inviteURL string, token string, err error)
+	IsOpenFunc          func(ctx context.Context) bool
+	InviteLinkFunc      func(ctx context.Context) string
+	HeadcountFunc       func(ctx context.Context) int
+	LimitFunc           func(ctx context.Context) int
+	ValidateFunc        func(ctx context.Context, token string) bool
+	CloseFunc           func(ctx context.Context) error
+	UpdateHeadcountFunc func(ctx context.Context, count int) error
 }
 
-func (m *MockRoomService) Init(passcode string, size int) (string, string, error) {
+func (m *MockRoomService) Init(ctx context.Context, passcode string, size int) (string, string, error) {
 	if m.InitFunc != nil {
-		return m.InitFunc(passcode, size)
+		return m.InitFunc(ctx, passcode, size)
 	}
 	return "", "", nil
 }
 
-func (m *MockRoomService) IsOpen() bool {
+func (m *MockRoomService) IsOpen(ctx context.Context) bool {
 	if m.IsOpenFunc != nil {
-		return m.IsOpenFunc()
+		return m.IsOpenFunc(ctx)
 	}
 	return false
 }
 
-func (m *MockRoomService) InviteLink() string {
+func (m *MockRoomService) InviteLink(ctx context.Context) string {
 	if m.InviteLinkFunc != nil {
-		return m.InviteLinkFunc()
+		return m.InviteLinkFunc(ctx)
 	}
 	return ""
 }
 
-func (m *MockRoomService) Headcount() int {
+func (m *MockRoomService) Headcount(ctx context.Context) int {
 	if m.HeadcountFunc != nil {
-		return m.HeadcountFunc()
+		return m.HeadcountFunc(ctx)
 	}
 	return 0
 }
 
-func (m *MockRoomService) Limit() int {
+func (m *MockRoomService) Limit(ctx context.Context) int {
 	if m.LimitFunc != nil {
-		return m.LimitFunc()
+		return m.LimitFunc(ctx)
 	}
 	return 0
 }
 
-func (m *MockRoomService) Validate(token string) bool {
+func (m *MockRoomService) Validate(ctx context.Context, token string) bool {
 	if m.ValidateFunc != nil {
-		return m.ValidateFunc(token)
+		return m.ValidateFunc(ctx, token)
 	}
 	return false
 }
 
-func (m *MockRoomService) Close() error {
+func (m *MockRoomService) Close(ctx context.Context) error {
 	if m.CloseFunc != nil {
-		return m.CloseFunc()
+		return m.CloseFunc(ctx)
 	}
 	return nil
 }
 
-func (m *MockRoomService) UpdateHeadcount(count int) error {
+func (m *MockRoomService) UpdateHeadcount(ctx context.Context, count int) error {
 	if m.UpdateHeadcountFunc != nil {
-		return m.UpdateHeadcountFunc(count)
+		return m.UpdateHeadcountFunc(ctx, count)
 	}
 	return nil
 }
@@ -83,7 +84,7 @@ func (m *MockRoomService) UpdateHeadcount(count int) error {
 // TestRoomInit_Success tests successful room initialization
 func TestRoomInit_Success(t *testing.T) {
 	mockRoom := &MockRoomService{
-		InitFunc: func(passcode string, size int) (string, string, error) {
+		InitFunc: func(ctx context.Context, passcode string, size int) (string, string, error) {
 			if passcode == "7777" && size == 10 {
 				return "http://example.com/join?token=abc123", "abc123", nil
 			}
@@ -119,7 +120,7 @@ func TestRoomInit_Success(t *testing.T) {
 // TestRoomInit_WrongPasscode tests passcode validation
 func TestRoomInit_WrongPasscode(t *testing.T) {
 	mockRoom := &MockRoomService{
-		InitFunc: func(passcode string, size int) (string, string, error) {
+		InitFunc: func(ctx context.Context, passcode string, size int) (string, string, error) {
 			return "", "", errors.New("invalid passcode")
 		},
 	}
@@ -142,10 +143,10 @@ func TestRoomInit_WrongPasscode(t *testing.T) {
 // TestRoomStatus_Open tests getting status of open room
 func TestRoomStatus_Open(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc:     func() bool { return true },
-		InviteLinkFunc: func() string { return "http://example.com/join?token=xyz" },
-		HeadcountFunc:  func() int { return 5 },
-		LimitFunc:      func() int { return 10 },
+		IsOpenFunc: func(ctx context.Context) bool { return true },
+		InviteLinkFunc: func(ctx context.Context) string { return "http://example.com/join?token=xyz" },
+		HeadcountFunc: func(ctx context.Context) int { return 5 },
+		LimitFunc: func(ctx context.Context) int { return 10 },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -178,7 +179,7 @@ func TestRoomStatus_Open(t *testing.T) {
 // TestRoomStatus_Closed tests getting status of closed room
 func TestRoomStatus_Closed(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc: func() bool { return false },
+		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -203,10 +204,10 @@ func TestRoomStatus_Closed(t *testing.T) {
 // TestRoomJoin_Success tests successful room join
 func TestRoomJoin_Success(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc:    func() bool { return true },
-		ValidateFunc:  func(token string) bool { return token == "valid-token" },
-		HeadcountFunc: func() int { return 5 },
-		LimitFunc:     func() int { return 10 },
+		IsOpenFunc: func(ctx context.Context) bool { return true },
+		ValidateFunc: func(ctx context.Context, token string) bool { return token == "valid-token" },
+		HeadcountFunc: func(ctx context.Context) int { return 5 },
+		LimitFunc: func(ctx context.Context) int { return 10 },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -240,7 +241,7 @@ func TestRoomJoin_Success(t *testing.T) {
 // TestRoomJoin_RoomClosed tests joining when room is closed
 func TestRoomJoin_RoomClosed(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc: func() bool { return false },
+		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -261,8 +262,8 @@ func TestRoomJoin_RoomClosed(t *testing.T) {
 // TestRoomJoin_InvalidToken tests joining with invalid token
 func TestRoomJoin_InvalidToken(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc:   func() bool { return true },
-		ValidateFunc: func(token string) bool { return false },
+		IsOpenFunc: func(ctx context.Context) bool { return true },
+		ValidateFunc: func(ctx context.Context, token string) bool { return false },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -282,10 +283,10 @@ func TestRoomJoin_InvalidToken(t *testing.T) {
 // TestRoomJoin_RoomFull tests joining when room is at capacity
 func TestRoomJoin_RoomFull(t *testing.T) {
 	mockRoom := &MockRoomService{
-		IsOpenFunc:    func() bool { return true },
-		ValidateFunc:  func(token string) bool { return true },
-		HeadcountFunc: func() int { return 10 },
-		LimitFunc:     func() int { return 10 }, // at capacity
+		IsOpenFunc: func(ctx context.Context) bool { return true },
+		ValidateFunc: func(ctx context.Context, token string) bool { return true },
+		HeadcountFunc: func(ctx context.Context) int { return 10 },
+		LimitFunc: func(ctx context.Context) int { return 10 }, // at capacity
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -305,8 +306,8 @@ func TestRoomJoin_RoomFull(t *testing.T) {
 // TestRoomClose_Success tests closing the room
 func TestRoomClose_Success(t *testing.T) {
 	mockRoom := &MockRoomService{
-		CloseFunc:  func() error { return nil },
-		IsOpenFunc: func() bool { return false },
+		CloseFunc: func(ctx context.Context) error { return nil },
+		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
 	h := handlers.New(mockRoom, nil, nil)
@@ -333,7 +334,7 @@ func TestRoomUpdatePeople_Success(t *testing.T) {
 	var updatedCount int
 
 	mockRoom := &MockRoomService{
-		UpdateHeadcountFunc: func(count int) error {
+		UpdateHeadcountFunc: func(ctx context.Context, count int) error {
 			updatedCount = count
 			return nil
 		},

@@ -15,7 +15,7 @@ func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	url, token, err := h.roomSvc.Init(strings.TrimSpace(req.Passcode), req.Size)
+	url, token, err := h.roomSvc.Init(r.Context(), strings.TrimSpace(req.Passcode), req.Size)
 	if err != nil {
 		httputil.WriteError(w, http.StatusConflict, err.Error())
 		return
@@ -24,37 +24,39 @@ func (h *Handlers) RoomInit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) RoomStatus(w http.ResponseWriter, r *http.Request) {
-	if h.roomSvc.IsOpen() && h.roomSvc.InviteLink() == "" {
+	ctx := r.Context()
+	if h.roomSvc.IsOpen(ctx) && h.roomSvc.InviteLink(ctx) == "" {
 		httputil.WriteError(w, http.StatusInternalServerError, "invite link is empty while room is open")
 		return
 	}
 	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{
-		Open:       h.roomSvc.IsOpen(),
-		InviteLink: h.roomSvc.InviteLink(),
-		Headcount:  h.roomSvc.Headcount(),
-		Limit:      h.roomSvc.Limit(),
+		Open:       h.roomSvc.IsOpen(ctx),
+		InviteLink: h.roomSvc.InviteLink(ctx),
+		Headcount:  h.roomSvc.Headcount(ctx),
+		Limit:      h.roomSvc.Limit(ctx),
 	})
 }
 
 func (h *Handlers) RoomJoin(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req room.JoinRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
-	if !h.roomSvc.IsOpen() {
+	if !h.roomSvc.IsOpen(ctx) {
 		httputil.WriteError(w, http.StatusConflict, "room is not open")
 		return
 	}
 
-	if ok := h.roomSvc.Validate(req.Token); !ok {
+	if ok := h.roomSvc.Validate(ctx, req.Token); !ok {
 		httputil.WriteError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
-	limit := h.roomSvc.Limit()
-	if h.roomSvc.Headcount() >= limit {
+	limit := h.roomSvc.Limit(ctx)
+	if h.roomSvc.Headcount(ctx) >= limit {
 		httputil.WriteError(w, http.StatusForbidden, "room is full at the configured limit")
 		return
 	}
@@ -65,21 +67,23 @@ func (h *Handlers) RoomJoin(w http.ResponseWriter, r *http.Request) {
 
 // RoomClose closes the room. Requires admin authentication via middleware.
 func (h *Handlers) RoomClose(w http.ResponseWriter, r *http.Request) {
-	if err := h.roomSvc.Close(); err != nil {
+	ctx := r.Context()
+	if err := h.roomSvc.Close(ctx); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to close room")
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{Open: h.roomSvc.IsOpen()})
+	httputil.WriteJSON(w, http.StatusOK, room.StatusResponse{Open: h.roomSvc.IsOpen(ctx)})
 }
 
 func (h *Handlers) RoomUpdatePeople(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req room.UpdateHeadcountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
-	if err := h.roomSvc.UpdateHeadcount(req.Headcount); err != nil {
+	if err := h.roomSvc.UpdateHeadcount(ctx, req.Headcount); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to update headcount")
 		return
 	}
