@@ -3,6 +3,11 @@ kind: Gateway
 metadata:
   name: donfra-gateway
   namespace: donfra
+  annotations:
+    # Configure service type (LoadBalancer, NodePort, or ClusterIP)
+    networking.istio.io/service-type: LoadBalancer
+    # Configure nodeSelector for gateway pods
+    traffic.istio.io/nodeSelector: "ingress-ready=true"
 spec:
   gatewayClassName: istio
   listeners:

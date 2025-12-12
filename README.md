@@ -233,6 +233,79 @@ NEXT_PUBLIC_API_BASE_URL=/api        # API 端点 (API endpoint)
 NEXT_PUBLIC_COLLAB_WS=/yjs           # WebSocket 端点 (WebSocket endpoint)
 ```
 
+## ☸️ Kubernetes 部署 (Kubernetes Deployment)
+
+### 一键部署到 Kind (One-command Kind Deployment)
+
+```bash
+cd infra/k8s
+bash setup-kind.sh
+```
+
+这个脚本会自动部署 (This script automatically deploys):
+- ✅ Kubernetes 集群（3 节点）(3-node cluster)
+- ✅ Istio Ambient Mode（无 sidecar 网格）(Sidecar-less mesh)
+- ✅ 完整应用栈 (Complete application stack)
+- ✅ 完整可观测性栈 (Full observability stack)
+
+### 可观测性栈 (Observability Stack)
+
+部署包含完整的 OpenTelemetry 生态 (Deployment includes full OpenTelemetry ecosystem):
+
+- **OpenTelemetry Collector** - 统一遥测收集 (Unified telemetry collection)
+- **Prometheus** - 指标存储与查询 (Metrics storage & querying)
+- **Loki** - 日志聚合 (Log aggregation)
+- **Grafana** - 统一可视化 (Unified visualization)
+- **Jaeger** - 分布式追踪 (Distributed tracing)
+
+### 访问地址 (Access URLs)
+
+添加到 `/etc/hosts` (Add to `/etc/hosts`):
+```
+127.0.0.1 donfra.local
+```
+
+访问服务 (Access services):
+- 🌐 **应用 (Application)**: http://donfra.local
+- 📊 **Grafana**: http://donfra.local/grafana
+- 📈 **Prometheus**: http://donfra.local/prometheus
+- 🔍 **Jaeger**: http://donfra.local/jaeger
+
+### 预配置仪表板 (Pre-configured Dashboard)
+
+Grafana 自动加载 "Donfra Platform Overview" 仪表板，包含 (Grafana auto-loads "Donfra Platform Overview" dashboard with):
+
+- 📊 业务指标 (Business metrics)
+  - Room opens/closes/joins
+  - Code executions
+  - Lessons created
+- ⚡ 性能指标 (Performance metrics)
+  - HTTP request rate & duration
+  - API latency (P95/P50)
+- 🖥️ 基础设施指标 (Infrastructure metrics)
+  - Pod CPU/Memory usage
+  - Database connections
+
+### 已埋点指标 (Instrumented Metrics)
+
+```
+donfra_room_opened_total          # 房间开启总数
+donfra_room_closed_total          # 房间关闭总数
+donfra_room_joins_total           # 用户加入总数
+donfra_code_executions_total      # 代码执行总数
+donfra_lessons_created_total      # 课程创建总数
+donfra_http_server_request_duration_seconds  # HTTP 延迟
+donfra_go_sql_connections_*       # 数据库连接池
+```
+
+### 详细文档 (Detailed Documentation)
+
+- [Setup Guide](infra/k8s/SETUP_GUIDE.md) - 完整部署指南
+- [Istio Ambient Setup](infra/k8s/ISTIO_AMBIENT_SETUP.md) - Istio 配置
+- [Observability Stack](OBSERVABILITY_STACK.md) - 可观测性栈
+- [Grafana Dashboards](GRAFANA_DASHBOARDS.md) - 仪表板文档
+- [Metrics Setup](METRICS_SETUP_COMPLETE.md) - 指标配置
+
 ## 📝 重要说明 (Important Notes)
 
 - 房间状态是 **临时的** (Room state is **ephemeral**, resets on API restart)
@@ -240,6 +313,7 @@ NEXT_PUBLIC_COLLAB_WS=/yjs           # WebSocket 端点 (WebSocket endpoint)
 - 协作编辑状态是 **临时的** (Collaborative editing state is **ephemeral**)
 - 只有课程内容持久化到数据库 (Only lesson content is persisted to PostgreSQL)
 - 所有 CSS 在 `/donfra-ui/public/styles/main.css` (All CSS in single file)
+- 指标通过 OTel → Prometheus → Grafana 流转 (Metrics flow: OTel → Prometheus → Grafana)
 
 ## 📄 License
 

@@ -42,10 +42,16 @@ echo -e "${YELLOW}[4/6] Verifying Istio components...${NC}"
 kubectl get pods -n istio-system
 kubectl get daemonset -n istio-system
 
-# Step 5: Enable ambient mode for donfra namespace
-echo -e "${YELLOW}[5/6] Enabling ambient mode for donfra namespace...${NC}"
-kubectl label namespace donfra istio.io/dataplane-mode=ambient --overwrite
-echo -e "${GREEN}✓ Ambient mode enabled for donfra namespace${NC}"
+# Step 5: Check if donfra namespace exists and enable ambient mode
+echo -e "${YELLOW}[5/6] Checking donfra namespace...${NC}"
+if kubectl get namespace donfra &> /dev/null; then
+    echo "Enabling ambient mode for donfra namespace..."
+    kubectl label namespace donfra istio.io/dataplane-mode=ambient --overwrite
+    echo -e "${GREEN}✓ Ambient mode enabled for donfra namespace${NC}"
+else
+    echo -e "${YELLOW}⚠ donfra namespace not found (will be created later)${NC}"
+    echo -e "${YELLOW}  Ambient mode will be enabled after namespace creation${NC}"
+fi
 
 # Step 6: Summary
 echo -e "${YELLOW}[6/6] Installation Summary${NC}"

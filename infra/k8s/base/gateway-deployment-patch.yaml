@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: donfra-gateway-istio
+  namespace: donfra
+spec:
+  template:
+    spec:
+      # Schedule on control-plane node which has port 80 mapped
+      nodeSelector:
+        ingress-ready: "true"
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: istio-proxy
+        ports:
+        - containerPort: 80
+          hostPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          hostPort: 443
+          name: https
+          protocol: TCP

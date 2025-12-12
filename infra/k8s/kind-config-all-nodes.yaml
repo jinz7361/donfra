@@ -1,0 +1,52 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: donfra-local
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  # HTTP
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  # HTTPS
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+  # PostgreSQL (for debugging)
+  - containerPort: 30432
+    hostPort: 5432
+    protocol: TCP
+  # Jaeger UI (for debugging)
+  - containerPort: 30686
+    hostPort: 16686
+    protocol: TCP
+
+# Worker 1 也添加端口映射
+- role: worker
+  labels:
+    ingress-ready: "true"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 8080  # 不能用 80，已被 control-plane 占用
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 8443
+    protocol: TCP
+
+# Worker 2 也添加端口映射
+- role: worker
+  labels:
+    ingress-ready: "true"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 8081
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 8444
+    protocol: TCP
