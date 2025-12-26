@@ -205,9 +205,16 @@ body{
   letter-spacing:1px;
   box-shadow:inset 0 0 10px rgba(169,142,100,0.25);
   text-transform:uppercase;
+  flex-shrink:0;
+}
+.nav{
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:8px;
 }
 .nav a{
-  margin-left:32px;
+  margin-left:24px;
   text-decoration:none;
   color:var(--ink-soft);
   font-family:'Rajdhani',sans-serif;
@@ -215,6 +222,7 @@ body{
   text-transform:uppercase;
   letter-spacing:0.5px;
   transition:color 0.3s ease, letter-spacing 0.3s ease;
+  white-space:nowrap;
 }
 .nav a:hover{
   color:var(--brass);
@@ -245,8 +253,6 @@ body{
 
 /* ==================== Responsive ==================== */
 @media(max-width:768px){
-  .header-inner{height:64px;}
-  .nav a{margin-left:20px;font-size:14px;}
   .display.h2{font-size:26px;}
   .lead{font-size:16px;}
 }
@@ -420,6 +426,19 @@ body{
   #contact .qr-box {
     width: 90px;
     height: 90px;
+  }
+
+  /* Header adjustments for mobile */
+  .header-inner {
+    height: 64px;
+  }
+  .nav a {
+    margin-left: 16px;
+    font-size: 13px;
+  }
+  .user-welcome {
+    margin-left: 50px;
+    display: none;
   }
 }
 
@@ -727,3 +746,319 @@ body{
   }
 }
 .excalicanvas{width:100%; height:360px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,0.02);}
+
+/* ==================== Authentication Components ==================== */
+
+/* Navigation Auth Buttons */
+.nav-auth-btn {
+  margin-left: 24px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(169,142,100,0.4);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-auth-btn:hover {
+  color: var(--brass);
+  border-color: var(--brass);
+  background: rgba(169,142,100,0.08);
+}
+
+.nav-auth-btn-primary {
+  background: linear-gradient(180deg, rgba(169,142,100,0.22), rgba(169,142,100,0.12));
+  border-color: rgba(169,142,100,0.55);
+  color: var(--ink);
+}
+
+.nav-auth-btn-primary:hover {
+  background: linear-gradient(180deg, rgba(169,142,100,0.3), rgba(169,142,100,0.16));
+}
+
+/* User Menu */
+.user-menu {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-welcome {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--ink-mid);
+  white-space: nowrap;
+}
+
+.user-button {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(169,142,100,0.55);
+  background: linear-gradient(180deg, rgba(169,142,100,0.22), rgba(169,142,100,0.12));
+  color: var(--ink);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.user-button:hover {
+  background: linear-gradient(180deg, rgba(169,142,100,0.3), rgba(169,142,100,0.16));
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: linear-gradient(160deg, rgba(26,33,30,0.98), rgba(12,14,15,0.98));
+  border: 1px solid rgba(169,142,100,0.35);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 18px 38px rgba(0,0,0,0.45);
+  z-index: 1001;
+}
+
+.user-info {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.user-email {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.user-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(169,142,100,0.12);
+  color: var(--brass);
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 24px;
+}
+
+/* Modal Dialog */
+.modal-dialog {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(160deg, rgba(26,33,30,0.98), rgba(12,14,15,0.98));
+  border: 1px solid rgba(169,142,100,0.35);
+  border-radius: 16px;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  border-color: var(--brass);
+  color: var(--brass);
+  background: rgba(169,142,100,0.08);
+}
+
+/* Modal Body */
+.modal-body {
+  padding: 24px;
+}
+
+/* Form Group */
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-mid);
+}
+
+.form-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(169,142,100,0.4);
+  border-radius: 10px;
+  background: rgba(12,14,15,0.9);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--brass);
+  background: rgba(12,14,15,0.95);
+  box-shadow: 0 0 0 3px rgba(169,142,100,0.12);
+}
+
+.form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-input::placeholder {
+  color: var(--ink-mid);
+  opacity: 0.6;
+}
+
+.form-hint {
+  margin-top: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-mid);
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.modal-actions .btn-strong {
+  flex: 1;
+}
+
+.modal-actions .btn-neutral {
+  flex: 0.6;
+}
+
+/* Modal Footer */
+.modal-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.link-brass {
+  color: var(--brass);
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.link-brass:hover {
+  color: var(--ink-strong);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-auth-btn {
+    margin-left: 16px;
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  .user-menu {
+    margin-left: 16px;
+  }
+
+  .user-button {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  .user-dropdown {
+    min-width: 180px;
+  }
+
+  .modal-dialog {
+    max-width: 90%;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .btn-strong,
+  .modal-actions .btn-neutral {
+    flex: 1;
+  }
+}

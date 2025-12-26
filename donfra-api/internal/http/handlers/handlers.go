@@ -5,6 +5,7 @@ import (
 
 	"donfra-api/internal/domain/auth"
 	"donfra-api/internal/domain/study"
+	"donfra-api/internal/domain/user"
 )
 
 // Handlers holds all service dependencies for HTTP handlers.
@@ -12,6 +13,7 @@ type Handlers struct {
 	roomSvc  RoomService
 	studySvc StudyService
 	authSvc  AuthService
+	userSvc  UserService
 }
 
 // RoomService defines the interface for room operations.
@@ -42,11 +44,23 @@ type AuthService interface {
 	IssueAdminToken(pass string) (string, error)
 }
 
+// UserService defines the interface for user operations.
+type UserService interface {
+	Register(ctx context.Context, req *user.RegisterRequest) (*user.User, error)
+	Login(ctx context.Context, req *user.LoginRequest) (*user.User, string, error)
+	ValidateToken(tokenString string) (*user.Claims, error)
+	GetUserByID(ctx context.Context, id uint) (*user.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*user.User, error)
+	GetJWTSecret() string
+	GetJWTExpiry() int
+}
+
 // New creates a new Handlers instance with the given services.
-func New(roomSvc RoomService, studySvc StudyService, authSvc AuthService) *Handlers {
+func New(roomSvc RoomService, studySvc StudyService, authSvc AuthService, userSvc UserService) *Handlers {
 	return &Handlers{
 		roomSvc:  roomSvc,
 		studySvc: studySvc,
 		authSvc:  authSvc,
+		userSvc:  userSvc,
 	}
 }

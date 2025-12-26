@@ -14,6 +14,7 @@ import (
 	"donfra-api/internal/domain/db"
 	"donfra-api/internal/domain/room"
 	"donfra-api/internal/domain/study"
+	"donfra-api/internal/domain/user"
 	"donfra-api/internal/http/router"
 	"donfra-api/internal/pkg/tracing"
 
@@ -61,6 +62,11 @@ func main() {
 	authSvc := auth.NewAuthService(cfg.AdminPass, cfg.JWTSecret)
 	studySvc := study.NewService(conn)
 
+	// Initialize user service with PostgreSQL repository
+	userRepo := user.NewPostgresRepository(conn)
+	userSvc := user.NewService(userRepo, cfg.JWTSecret, 168) // 168 hours = 7 days
+	log.Println("[donfra-api] user service initialized")
+
 	// Start Redis Pub/Sub subscriber for headcount updates (if using Redis)
 	var subCancel context.CancelFunc
 	if redisClient != nil {
@@ -74,7 +80,7 @@ func main() {
 		}()
 	}
 
-	r := router.New(cfg, roomSvc, studySvc, authSvc)
+	r := router.New(cfg, roomSvc, studySvc, authSvc, userSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,

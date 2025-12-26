@@ -1,4 +1,5 @@
 import "@excalidraw/excalidraw/index.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata = {
   title: "Donfra — British Tactical Elegance",
@@ -15,7 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="/styles/tokens.css" />
         <link rel="stylesheet" href="/styles/main.css" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
