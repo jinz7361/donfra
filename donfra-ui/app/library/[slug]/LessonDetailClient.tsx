@@ -7,6 +7,7 @@ import ReactMarkdown, {
   type Components as MarkdownComponents,
 } from "react-markdown";
 import { API_BASE, api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { EMPTY_EXCALIDRAW, sanitizeExcalidraw } from "@/lib/utils/excalidraw";
 import "./lesson-detail.css";
 
@@ -114,20 +115,23 @@ const markdownComponents: MarkdownComponents = {
 
 export default function LessonDetailClient({ slug }: { slug: string }) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [canRenderDiagram, setCanRenderDiagram] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  // Check if user is admin via user authentication OR admin token
+  const isUserAdmin = user?.role === "admin";
+  const isAdmin = isUserAdmin || Boolean(token);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("admin_token");
-    setIsAdmin(Boolean(token));
     setToken(token);
     setCanRenderDiagram(true);
   }, []);
@@ -148,7 +152,7 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const res = await fetch(`${API_ROOT}/lessons/${slug}`, { headers });
+        const res = await fetch(`${API_ROOT}/lessons/${slug}`, { headers, credentials: 'include' });
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
@@ -256,15 +260,15 @@ export default function LessonDetailClient({ slug }: { slug: string }) {
               </button>
               <button
                 onClick={async () => {
-                  if (!token) {
-                    setActionError("Admin token missing. Please login.");
+                  if (!token && !isUserAdmin) {
+                    setActionError("Admin authentication required. Please login.");
                     return;
                   }
                   if (!window.confirm("Delete this lesson? This cannot be undone.")) return;
                   try {
                     setBusy(true);
                     setActionError(null);
-                    await api.study.delete(lesson.slug, token);
+                    await api.study.delete(lesson.slug, token || "");
                     router.push("/library");
                   } catch (err: any) {
                     setActionError(err?.message || "Failed to delete lesson");
