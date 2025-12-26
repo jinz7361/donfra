@@ -83,3 +83,44 @@ func IsAdminFromContext(ctx context.Context) bool {
 	isAdmin, ok := val.(bool)
 	return ok && isAdmin
 }
+
+// RequireAdminUser requires either:
+// 1. Admin token via Authorization header (legacy admin login)
+// 2. User JWT token with role=admin via Cookie (user authentication)
+// Note: UserAuthService is defined in user_auth.go
+func RequireAdminUser(authSvc TokenValidator, userSvc UserAuthService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// First, try admin token via Authorization header
+			authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+			if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+				token := strings.TrimSpace(authHeader[7:])
+				if token != "" && authSvc != nil {
+					claims, err := authSvc.Validate(token)
+					if err == nil && claims != nil {
+						subject, _ := claims.GetSubject()
+						if subject == "admin" {
+							next.ServeHTTP(w, r)
+							return
+						}
+					}
+				}
+			}
+
+			// Second, try user JWT token via Cookie
+			if userSvc != nil {
+				cookie, err := r.Cookie("auth_token")
+				if err == nil && cookie.Value != "" {
+					claims, err := userSvc.ValidateToken(cookie.Value)
+					if err == nil && claims != nil && claims.Role == "admin" {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+			}
+
+			// Neither admin token nor admin user found
+			http.Error(w, "admin authentication required", http.StatusUnauthorized)
+		})
+	}
+}

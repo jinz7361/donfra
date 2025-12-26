@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { API_BASE, api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { EMPTY_EXCALIDRAW, sanitizeExcalidraw, type ExcalidrawData } from "@/lib/utils/excalidraw";
 import "../[slug]/edit/edit-lesson.css";
 
@@ -22,6 +23,7 @@ const Excalidraw = dynamic(() => import("@excalidraw/excalidraw").then((mod) => 
 
 export default function CreateLessonClient() {
   const router = useRouter();
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -31,16 +33,22 @@ export default function CreateLessonClient() {
   const [error, setError] = useState<string | null>(null);
   const excaliRef = useRef<ExcalidrawData>(EMPTY_EXCALIDRAW);
 
+  // Check if user is admin via user authentication OR admin token
+  const isUserAdmin = user?.role === "admin";
+  const isAdmin = isUserAdmin || Boolean(token);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("admin_token");
     setToken(saved);
-    if (!saved) setError("Admin login required to create lessons.");
-  }, []);
+    if (!saved && !isUserAdmin) {
+      setError("Admin login required to create lessons.");
+    }
+  }, [isUserAdmin]);
 
   const handleSubmit = async () => {
-    if (!token) {
-      setError("Admin token missing. Please login.");
+    if (!token && !isUserAdmin) {
+      setError("Admin authentication required. Please login.");
       return;
     }
     if (!slug.trim() || !title.trim()) {
@@ -57,7 +65,7 @@ export default function CreateLessonClient() {
         excalidraw: excaliRef.current,
         isPublished,
       };
-      await api.study.create(payload, token);
+      await api.study.create(payload, token || "");
       router.push(`/library/${payload.slug}`);
     } catch (err: any) {
       setError(err?.message || "Failed to create lesson");

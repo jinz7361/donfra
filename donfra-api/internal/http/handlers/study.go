@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -15,9 +16,23 @@ import (
 	"donfra-api/internal/pkg/tracing"
 )
 
+// isAdminUser checks if the user is admin by checking both:
+// 1. Admin token context (from OptionalAdmin middleware)
+// 2. User role context (from OptionalAuth middleware)
+func isAdminUser(ctx context.Context) bool {
+	// Check admin token first
+	if middleware.IsAdminFromContext(ctx) {
+		return true
+	}
+
+	// Check user role
+	role, ok := ctx.Value("user_role").(string)
+	return ok && role == "admin"
+}
+
 // ListLessonsHandler handles GET /api/lessons and returns lessons based on auth status.
 // Admin users see all lessons (published + unpublished), regular users see only published.
-// Requires OptionalAdmin middleware to set context.
+// Requires OptionalAuth middleware to set context.
 func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracing.StartSpan(r.Context(), "handler.ListLessons")
 	defer span.End()
@@ -27,9 +42,9 @@ func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check admin status
+	// Check admin status (either admin token OR user with role=admin)
 	_, authSpan := tracing.StartSpan(ctx, "handler.CheckAdminAuth")
-	isAdmin := middleware.IsAdminFromContext(ctx)
+	isAdmin := isAdminUser(ctx)
 	authSpan.SetAttributes(tracing.AttrIsAdmin.Bool(isAdmin))
 	authSpan.End()
 
@@ -57,7 +72,7 @@ func (h *Handlers) ListLessonsHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetLessonBySlugHandler handles GET /api/lessons/{slug} and returns the lesson with full content.
 // Unpublished lessons can only be accessed by admin users.
-// Requires OptionalAdmin middleware to set context.
+// Requires OptionalAuth middleware to set context.
 func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracing.StartSpan(r.Context(), "handler.GetLessonBySlug")
 	defer span.End()
@@ -89,10 +104,10 @@ func (h *Handlers) GetLessonBySlugHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// If lesson is unpublished, verify admin access
+	// If lesson is unpublished, verify admin access (either admin token OR user with role=admin)
 	if !lesson.IsPublished {
 		_, authSpan := tracing.StartSpan(ctx, "handler.CheckUnpublishedAccess")
-		isAdmin := middleware.IsAdminFromContext(ctx)
+		isAdmin := isAdminUser(ctx)
 		authSpan.SetAttributes(
 			tracing.AttrIsAdmin.Bool(isAdmin),
 			attribute.Bool("lesson.is_published", lesson.IsPublished),

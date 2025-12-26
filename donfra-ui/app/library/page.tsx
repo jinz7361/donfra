@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 type Lesson = {
   id: number;
@@ -27,11 +28,16 @@ export default function LibraryPage() {
 
 function LibraryInner() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin via user authentication OR admin token
+  const isUserAdmin = user?.role === "admin";
+  const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+  const isAdmin = isUserAdmin || Boolean(adminToken);
 
   useEffect(() => {
     (async () => {
@@ -39,7 +45,6 @@ function LibraryInner() {
         let token: string | null = null;
         if (typeof window !== "undefined") {
           token = localStorage.getItem("admin_token");
-          setIsAdmin(Boolean(token));
         }
 
         const headers: HeadersInit = {};
@@ -47,7 +52,7 @@ function LibraryInner() {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const res = await fetch(`${API_ROOT}/lessons`, { headers });
+        const res = await fetch(`${API_ROOT}/lessons`, { headers, credentials: 'include' });
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error("Unexpected response");
         setLessons(data);

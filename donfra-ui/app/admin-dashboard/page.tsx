@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 type RoomStatus = {
   open: boolean;
@@ -11,6 +12,7 @@ type RoomStatus = {
 };
 
 export default function AdminDashboard() {
+  const { user, loading: authLoading } = useAuth();
   const [password, setPassword] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<RoomStatus | null>(null);
@@ -19,6 +21,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string>("");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
+  // Check if user is admin via user authentication
+  const isUserAdmin = user?.role === "admin";
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("admin_token");
@@ -26,8 +31,8 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (token) refreshStatus();
-  }, [token]);
+    if (token || isUserAdmin) refreshStatus();
+  }, [token, isUserAdmin]);
 
   const login = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -86,9 +91,29 @@ export default function AdminDashboard() {
     if (typeof window !== "undefined") localStorage.removeItem("admin_token");
   };
 
-  const authed = Boolean(token);
+  // User is authenticated if they have admin token OR they're logged in as admin user
+  const authed = Boolean(token) || isUserAdmin;
   const statusBadge = status?.open ? "badge-on" : "badge-off";
   const statusText = status?.open ? "Room is live" : "Room is closed";
+
+  // Show loading state while checking user authentication
+  if (authLoading) {
+    return (
+      <main className="admin-shell">
+        <video className="admin-hero-video" autoPlay loop muted playsInline>
+          <source src="/triumph.mp4" type="video/mp4" />
+        </video>
+        <div className="admin-vignette" />
+        <div className="admin-bg-grid" />
+        <div className="admin-wrapper">
+          <div className="admin-headline">
+            <p className="eyebrow">Admin Mission Control</p>
+            <h1>Loading...</h1>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!authed) {
     return (

@@ -103,4 +103,16 @@ export const api = {
         return body;
       }),
   },
+  auth: {
+    register: (email: string, password: string, username?: string) =>
+      postJSON<{ user: { id: number; email: string; username: string; role: string; isActive: boolean; createdAt: string } }>("/auth/register", { email, password, username }),
+    login: (email: string, password: string) =>
+      postJSON<{ user: { id: number; email: string; username: string; role: string; isActive: boolean; createdAt: string }; token: string }>("/auth/login", { email, password }),
+    logout: () =>
+      postJSON<{ message: string }>("/auth/logout", {}),
+    me: () =>
+      getJSON<{ user: { id: number; email: string; username: string; role: string; isActive: boolean; createdAt: string } }>("/auth/me"),
+    refresh: () =>
+      postJSON<{ token: string }>("/auth/refresh", {}),
+  },
 };

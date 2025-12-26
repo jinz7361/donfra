@@ -1,10 +1,33 @@
 'use client';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/lib/auth-context";
+import SignInModal from "@/components/auth/SignInModal";
+import SignUpModal from "@/components/auth/SignUpModal";
 
 
 export default function Home() {
   useEffect(() => { document.body.style.margin = "0"; }, []);
+
+  const { user, logout } = useAuth();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSwitchToSignUp = () => {
+    setShowSignIn(false);
+    setShowSignUp(true);
+  };
+
+  const handleSwitchToSignIn = () => {
+    setShowSignUp(false);
+    setShowSignIn(true);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setShowUserMenu(false);
+  };
 
   return (
     <main className="app-root">
@@ -19,9 +42,49 @@ export default function Home() {
             <a href="#pipeline">Mission Path</a>
             <a href="#stories">Stories</a>
             <a href="#contact">Contact</a>
+
+            {user ? (
+              <div className="user-menu">
+                <span className="user-welcome">Welcome,</span>
+                <button className="user-button" onClick={() => setShowUserMenu(!showUserMenu)}>
+                  {user.username || user.email}
+                </button>
+                {showUserMenu && (
+                  <div className="user-dropdown">
+                    <div className="user-info">
+                      <p className="user-email">{user.email}</p>
+                      <p className="user-role">{user.role}</p>
+                    </div>
+                    <button className="dropdown-item" onClick={handleLogout}>
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button className="nav-auth-btn" onClick={() => setShowSignIn(true)}>
+                  Sign In
+                </button>
+                <button className="nav-auth-btn nav-auth-btn-primary" onClick={() => setShowSignUp(true)}>
+                  Sign Up
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </header>
+
+      <SignInModal
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+        onSwitchToSignUp={handleSwitchToSignUp}
+      />
+      <SignUpModal
+        isOpen={showSignUp}
+        onClose={() => setShowSignUp(false)}
+        onSwitchToSignIn={handleSwitchToSignIn}
+      />
 
       {/* ===== HERO ===== */}
       <section id="top" className="hero">

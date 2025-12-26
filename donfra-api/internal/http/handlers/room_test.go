@@ -92,7 +92,7 @@ func TestRoomInit_Success(t *testing.T) {
 		},
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.InitRequest{Passcode: "7777", Size: 10}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -125,7 +125,7 @@ func TestRoomInit_WrongPasscode(t *testing.T) {
 		},
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.InitRequest{Passcode: "wrong", Size: 10}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -149,7 +149,7 @@ func TestRoomStatus_Open(t *testing.T) {
 		LimitFunc:      func(ctx context.Context) int { return 10 },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/room/status", nil)
 	w := httptest.NewRecorder()
@@ -182,7 +182,7 @@ func TestRoomStatus_Closed(t *testing.T) {
 		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/room/status", nil)
 	w := httptest.NewRecorder()
@@ -210,7 +210,7 @@ func TestRoomJoin_Success(t *testing.T) {
 		LimitFunc:     func(ctx context.Context) int { return 10 },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.JoinRequest{Token: "valid-token"}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -244,7 +244,7 @@ func TestRoomJoin_RoomClosed(t *testing.T) {
 		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.JoinRequest{Token: "any-token"}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -266,7 +266,7 @@ func TestRoomJoin_InvalidToken(t *testing.T) {
 		ValidateFunc: func(ctx context.Context, token string) bool { return false },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.JoinRequest{Token: "invalid-token"}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -289,7 +289,7 @@ func TestRoomJoin_RoomFull(t *testing.T) {
 		LimitFunc:     func(ctx context.Context) int { return 10 }, // at capacity
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	reqBody := room.JoinRequest{Token: "valid-token"}
 	bodyBytes, _ := json.Marshal(reqBody)
@@ -310,7 +310,7 @@ func TestRoomClose_Success(t *testing.T) {
 		IsOpenFunc: func(ctx context.Context) bool { return false },
 	}
 
-	h := handlers.New(mockRoom, nil, nil)
+	h := handlers.New(mockRoom, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/room/close", nil)
 	w := httptest.NewRecorder()

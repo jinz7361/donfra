@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { API_BASE, api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { EMPTY_EXCALIDRAW, sanitizeExcalidraw, type ExcalidrawData } from "@/lib/utils/excalidraw";
 import "./edit-lesson.css";
 
@@ -25,6 +26,7 @@ const Excalidraw = dynamic(() => import("@excalidraw/excalidraw").then((mod) => 
 
 export default function EditLessonClient({ slug }: { slug: string }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,12 +38,18 @@ export default function EditLessonClient({ slug }: { slug: string }) {
   const [diagram, setDiagram] = useState<ExcalidrawData>(EMPTY_EXCALIDRAW);
   const diagramRef = useRef<ExcalidrawData>(EMPTY_EXCALIDRAW);
 
+  // Check if user is admin via user authentication OR admin token
+  const isUserAdmin = user?.role === "admin";
+  const isAdmin = isUserAdmin || Boolean(token);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("admin_token");
     setToken(saved);
-    if (!saved) setError("Admin login required to edit lessons.");
-  }, []);
+    if (!saved && !isUserAdmin) {
+      setError("Admin login required to edit lessons.");
+    }
+  }, [isUserAdmin]);
 
   useEffect(() => {
     // Skip fetching until token state is initialized
@@ -59,7 +67,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
           headers.Authorization = `Bearer ${token}`;
         }
 
-        const res = await fetch(`${API_ROOT}/lessons/${slug}`, { headers });
+        const res = await fetch(`${API_ROOT}/lessons/${slug}`, { headers, credentials: 'include' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
         let excaliData = data.excalidraw;
@@ -94,8 +102,8 @@ export default function EditLessonClient({ slug }: { slug: string }) {
   }, [slug, token]);
 
   const handleSave = async () => {
-    if (!token) {
-      setError("Admin token missing. Please login.");
+    if (!token && !isUserAdmin) {
+      setError("Admin authentication required. Please login.");
       return;
     }
     try {
@@ -106,7 +114,7 @@ export default function EditLessonClient({ slug }: { slug: string }) {
         markdown,
         excalidraw: diagramRef.current,
         isPublished
-      }, token);
+      }, token || "");
       router.push(`/library/${slug}`);
     } catch (err: any) {
       setError(err?.message || "Failed to save");
