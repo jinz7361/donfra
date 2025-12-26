@@ -8,6 +8,7 @@ import (
 
 	"donfra-api/internal/config"
 	"donfra-api/internal/domain/auth"
+	"donfra-api/internal/domain/interview"
 	"donfra-api/internal/domain/room"
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/domain/user"
@@ -15,7 +16,7 @@ import (
 	"donfra-api/internal/http/middleware"
 )
 
-func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, authSvc *auth.AuthService, userSvc *user.Service) http.Handler {
+func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, authSvc *auth.AuthService, userSvc *user.Service, interviewSvc interview.Service) http.Handler {
 	root := chi.NewRouter()
 
 	// Tracing middleware (must be first to capture all requests)
@@ -36,7 +37,7 @@ func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, auth
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	h := handlers.New(roomSvc, studySvc, authSvc, userSvc)
+	h := handlers.New(roomSvc, studySvc, authSvc, userSvc, interviewSvc)
 	v1 := chi.NewRouter()
 
 	// ===== User Authentication Routes (Public) =====
@@ -69,6 +70,12 @@ func New(cfg config.Config, roomSvc *room.Service, studySvc *study.Service, auth
 	v1.With(middleware.RequireAdminUser(authSvc, userSvc)).Post("/lessons", h.CreateLessonHandler)
 	v1.With(middleware.RequireAdminUser(authSvc, userSvc)).Patch("/lessons/{slug}", h.UpdateLessonHandler)
 	v1.With(middleware.RequireAdminUser(authSvc, userSvc)).Delete("/lessons/{slug}", h.DeleteLessonHandler)
+
+	// ===== Interview Room Routes =====
+	// Authenticated users can create/join/close interview rooms
+	v1.With(middleware.RequireAuth(userSvc)).Post("/interview/init", h.InitInterviewRoomHandler)
+	v1.Post("/interview/join", h.JoinInterviewRoomHandler) // Public: anyone with invite token can join
+	v1.With(middleware.RequireAuth(userSvc)).Post("/interview/close", h.CloseInterviewRoomHandler)
 
 	root.Mount("/api/v1", v1)
 	root.Mount("/api", v1)

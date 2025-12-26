@@ -12,6 +12,7 @@ import (
 	"donfra-api/internal/config"
 	"donfra-api/internal/domain/auth"
 	"donfra-api/internal/domain/db"
+	"donfra-api/internal/domain/interview"
 	"donfra-api/internal/domain/room"
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/domain/user"
@@ -67,6 +68,11 @@ func main() {
 	userSvc := user.NewService(userRepo, cfg.JWTSecret, 168) // 168 hours = 7 days
 	log.Println("[donfra-api] user service initialized")
 
+	// Initialize interview room service with PostgreSQL repository
+	interviewRepo := interview.NewRepository(conn)
+	interviewSvc := interview.NewService(interviewRepo, cfg.JWTSecret, cfg.BaseURL)
+	log.Println("[donfra-api] interview room service initialized")
+
 	// Start Redis Pub/Sub subscriber for headcount updates (if using Redis)
 	var subCancel context.CancelFunc
 	if redisClient != nil {
@@ -80,7 +86,7 @@ func main() {
 		}()
 	}
 
-	r := router.New(cfg, roomSvc, studySvc, authSvc, userSvc)
+	r := router.New(cfg, roomSvc, studySvc, authSvc, userSvc, interviewSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,

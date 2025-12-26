@@ -69,7 +69,17 @@ const server = http.createServer((request, response) => {
 const wss = new WebSocket.Server({ server })
 
 wss.on('connection', (conn, req) => {
-  setupWSConnection(conn, req, { gc: req.url.slice(1) !== 'ws/prosemirror-versions' })
+  // Extract room_id from URL path (y-websocket sends room name in path)
+  // URL format: /ws or /room-id or /interview/room-id
+  const docName = req.url.slice(1).split('?')[0] || 'default-room'
+
+  console.log(`${new Date().toISOString()} New WS connection to room: ${docName}`)
+
+  // setupWSConnection will use docName to get/create the Yjs document
+  // Each unique docName gets its own isolated Yjs document
+  setupWSConnection(conn, req, {
+    gc: docName !== 'ws/prosemirror-versions'
+  })
 })
 
 // Publish headcount updates to Redis Pub/Sub
@@ -87,19 +97,29 @@ async function publishHeadcount(count) {
   }
 }
 
-// Monitor connection count and publish changes
+// Monitor connection count per room and publish changes
 setInterval(() => {
   let conns = 0
-  docs.forEach(doc => { conns += doc.conns.size })
+  const roomStats = {}
+
+  docs.forEach((doc, docName) => {
+    const roomConns = doc.conns.size
+    conns += roomConns
+    if (roomConns > 0) {
+      roomStats[docName] = roomConns
+    }
+  })
+
   const stats = {
     conns,
     docs: docs.size,
+    rooms: roomStats,
     websocket: `ws://localhost:${port}`,
     http: `http://localhost:${port}`
   }
   console.log(`${new Date().toISOString()} Stats: ${JSON.stringify(stats)}`)
 
-  // Publish headcount changes to Redis Pub/Sub
+  // Publish headcount changes to Redis Pub/Sub (global count for backward compatibility)
   if (typeof global.__lastConns === 'undefined') global.__lastConns = -1
   if (conns !== global.__lastConns) {
     global.__lastConns = conns

@@ -4,17 +4,10 @@ import (
 	"context"
 
 	"donfra-api/internal/domain/auth"
+	"donfra-api/internal/domain/interview"
 	"donfra-api/internal/domain/study"
 	"donfra-api/internal/domain/user"
 )
-
-// Handlers holds all service dependencies for HTTP handlers.
-type Handlers struct {
-	roomSvc  RoomService
-	studySvc StudyService
-	authSvc  AuthService
-	userSvc  UserService
-}
 
 // RoomService defines the interface for room operations.
 type RoomService interface {
@@ -55,12 +48,31 @@ type UserService interface {
 	GetJWTExpiry() int
 }
 
+// InterviewService defines the interface for interview room operations.
+type InterviewService interface {
+	InitRoom(ctx context.Context, userID uint, isAdmin bool) (*interview.InitRoomResponse, error)
+	JoinRoom(ctx context.Context, inviteToken string) (*interview.JoinRoomResponse, error)
+	CloseRoom(ctx context.Context, roomID string, userID uint) error
+	GetRoomByID(ctx context.Context, roomID string) (*interview.InterviewRoom, error)
+	UpdateHeadcount(ctx context.Context, roomID string, headcount int) error
+}
+
+// Handlers holds all service dependencies for HTTP handlers.
+type Handlers struct {
+	roomSvc      RoomService
+	studySvc     StudyService
+	authSvc      AuthService
+	userSvc      UserService
+	interviewSvc InterviewService
+}
+
 // New creates a new Handlers instance with the given services.
-func New(roomSvc RoomService, studySvc StudyService, authSvc AuthService, userSvc UserService) *Handlers {
+func New(roomSvc RoomService, studySvc StudyService, authSvc AuthService, userSvc UserService, interviewSvc InterviewService) *Handlers {
 	return &Handlers{
-		roomSvc:  roomSvc,
-		studySvc: studySvc,
-		authSvc:  authSvc,
-		userSvc:  userSvc,
+		roomSvc:      roomSvc,
+		studySvc:     studySvc,
+		authSvc:      authSvc,
+		userSvc:      userSvc,
+		interviewSvc: interviewSvc,
 	}
 }

@@ -33,8 +33,18 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 INSERT INTO users (email, password, username, role, is_active)
 VALUES (
     'admin@donfra.com',
-    '$2a$12$/.ZnTCSQ/htuc6xJtZmG9uyViBygcOyZzPlz2arLHRvZ27Hh7MLGS', -- admin123
+    '$2a$12$/.ZnTCSQ/htuc6xJtZmG9uyViBygcOyZzPlz2arLHRvZ27Hh7MLGS',
     'admin',
+    'admin',
+    true
+)
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO users (email, password, username, role, is_active)
+VALUES (
+    'b@b.com',
+    '$2a$12$/.ZnTCSQ/htuc6xJtZmG9uyViBygcOyZzPlz2arLHRvZ27Hh7MLGS',
+    'bdmin',
     'admin',
     true
 )

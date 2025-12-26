@@ -78,8 +78,9 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db/000_seed_lessons.sql:/docker-entrypoint-initdb.d/000_seed_lessons.sql:ro
       - ./db/001_create_users_table.sql:/docker-entrypoint-initdb.d/001_create_users_table.sql:ro
-      - ./db/seed_lessons.sql:/docker-entrypoint-initdb.d/002_seed_lessons.sql:ro
+      - ./db/002_create_interview_rooms.sql:/docker-entrypoint-initdb.d/002_create_interview_rooms.sql:ro
     networks:
       - donfra-local
 

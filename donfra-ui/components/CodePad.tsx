@@ -16,10 +16,10 @@ let YNS: typeof import("yjs") | null = null;
 let YWebsocketNS: typeof import("y-websocket") | null = null;
 let YMonacoNS: typeof import("y-monaco") | null = null;
 
-type Props = { onExit?: () => void };
+type Props = { onExit?: () => void; roomId?: string };
 type Peer = { name: string; color: string; colorLight?: string };
 
-export default function CodePad({ onExit }: Props) {
+export default function CodePad({ onExit, roomId }: Props) {
   // 运行区（由共享 Y.Map 驱动）
   const [stdout, setStdout] = useState("");
   const [stderr, setStderr] = useState("");
@@ -166,33 +166,68 @@ export default function CodePad({ onExit }: Props) {
 
     // 协作地址/房间
     const params = new URLSearchParams(window.location.search);
-    const roomName = params.get("invite") || "default-room";
+    // Use roomId prop if provided (for interview rooms), otherwise fall back to URL param or default
+    const roomName = roomId || params.get("invite") || "default-room";
     // Ensure collabURL is a string: prefer env var, otherwise derive a sensible fallback from current origin
     const collabURL = process.env.NEXT_PUBLIC_COLLAB_WS ?? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/yjs`;
 
     // 创建 Doc / Provider
+    // The WebsocketProvider sends the roomName in the URL path (e.g., ws://host/yjs/room-id)
+    // The WebSocket server extracts it from the path and creates isolated Yjs documents per room
     const doc = new YNS!.Doc();
     const ytext = doc.getText("monaco");
     const provider = new YWebsocketNS!.WebsocketProvider(collabURL, roomName, doc, { connect: true });
     const awareness = provider.awareness;
 
-    // Awareness：用户名 + 颜色（role: master/agent；或随机）
-    const role = (params.get("role") || "").toLowerCase();
-    const userName =
-      (role === "master" && "Master") ||
-      (role === "agent" && "Agent") ||
-      `User-${Math.random().toString(36).slice(2, 6)}`;
+    // Get real username from backend (if user is authenticated)
+    let userName = `User-${Math.random().toString(36).slice(2, 6)}`;
+    try {
+      const response = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user && data.user.username) {
+          userName = data.user.username;
+        }
+      }
+    } catch (err) {
+      // If not authenticated or error, use guest username
+      console.log("Not authenticated or error fetching user info, using guest username");
+    }
     userNameRef.current = userName;
 
-    const pickColor = () => {
-      if (role === "master") return { color: "#2aa198", colorLight: "rgba(42,161,152,.25)" }; // teal
-      if (role === "agent")  return { color: "#d33682", colorLight: "rgba(211,54,130,.25)" }; // magenta
-      const h = Math.floor(Math.random() * 360);
-      return { color: `hsl(${h} 70% 55%)`, colorLight: `hsl(${h} 70% 55% / .22)` };
-    };
-    const { color, colorLight } = pickColor();
+    // Generate distinct color for this user using a predefined palette
+    // This ensures colors are visually distinct and easy to differentiate
+    const colorPalette = [
+      { color: "#e74c3c", colorLight: "rgba(231, 76, 60, 0.25)" },   // Red
+      { color: "#3498db", colorLight: "rgba(52, 152, 219, 0.25)" },  // Blue
+      { color: "#2ecc71", colorLight: "rgba(46, 204, 113, 0.25)" },  // Green
+      { color: "#f39c12", colorLight: "rgba(243, 156, 18, 0.25)" },  // Orange
+      { color: "#9b59b6", colorLight: "rgba(155, 89, 182, 0.25)" },  // Purple
+      { color: "#1abc9c", colorLight: "rgba(26, 188, 156, 0.25)" },  // Turquoise
+      { color: "#e91e63", colorLight: "rgba(233, 30, 99, 0.25)" },   // Pink
+      { color: "#00bcd4", colorLight: "rgba(0, 188, 212, 0.25)" },   // Cyan
+      { color: "#ff5722", colorLight: "rgba(255, 87, 34, 0.25)" },   // Deep Orange
+      { color: "#8bc34a", colorLight: "rgba(139, 195, 74, 0.25)" },  // Light Green
+    ];
+    const colorIndex = Math.floor(Math.random() * colorPalette.length);
+    const { color, colorLight } = colorPalette[colorIndex];
 
     awareness.setLocalState({ user: { name: userName, color, colorLight } });
+
+    console.log('[CodePad] Local awareness state set:', { userName, color, colorLight });
+    console.log('[CodePad] Provider status:', provider.wsconnected ? 'connected' : 'disconnected');
+
+    // Monitor WebSocket connection status
+    provider.on('status', (event: any) => {
+      console.log('[CodePad] WebSocket status changed:', event.status);
+    });
+
+    provider.on('sync', (isSynced: boolean) => {
+      console.log('[CodePad] Sync status:', isSynced ? 'synced' : 'syncing');
+    });
 
     // 在线同伴列表
     const applyPeers = () => {
@@ -200,6 +235,7 @@ export default function CodePad({ onExit }: Props) {
         .map((s: any) => s?.user)
         .filter(Boolean) as Peer[];
       setPeers(states);
+      console.log('[CodePad] Awareness states updated. Total peers:', states.length, states);
     };
     awareness.on("change", applyPeers);
     applyPeers();
@@ -207,9 +243,19 @@ export default function CodePad({ onExit }: Props) {
 
     // 绑定 Monaco（把 awareness 传入，让 y-monaco 渲染光标/选区/标签）
     const model = editor.getModel();
-    
+
     if (!model) return;
-    const binding = new YMonacoNS!.MonacoBinding(ytext, model, new Set([editor]), awareness);
+
+    // IMPORTANT: Pass awareness to MonacoBinding to enable remote cursor/selection rendering
+    // The binding will automatically create decorations for remote users
+    const binding = new YMonacoNS!.MonacoBinding(
+      ytext,
+      model,
+      new Set([editor]),
+      awareness
+    );
+
+    console.log('[CodePad] MonacoBinding created with awareness. Current awareness states:', awareness.getStates().size);
 
     // === (A) 为每位协作者注入“按 clientId 的颜色样式”（兼容类后缀 & data-clientid） ===
     const styleElId = `y-remote-style-${roomName}`;
@@ -227,15 +273,11 @@ export default function CodePad({ onExit }: Props) {
       return "rgba(0,0,0,.18)";
     };
     const selFor = (clientId: number) => {
-      const headClass = `.yRemoteSelectionHead-${clientId}`;
-      const bodyClass = `.yRemoteSelection-${clientId}`;
-      const headAttr  = `.yRemoteSelectionHead[data-clientid="${clientId}"]`;
-      const bodyAttr  = `.yRemoteSelection[data-clientid="${clientId}"]`;
       const root = `.editor-pane .monaco-editor`;
       return {
-        head: `${root} ${headClass}, ${root} ${headAttr}`,
-        body: `${root} ${bodyClass}, ${root} ${bodyAttr}`,
-        label: `${root} .yRemoteSelectionHeadLabel`,
+        head: `${root} .yRemoteSelectionHead-${clientId}`,
+        body: `${root} .yRemoteSelection-${clientId}`,
+        headLabel: `${root} .yRemoteSelectionHead-${clientId} .yRemoteSelectionHeadLabel`,
       };
     };
     const applyClientStyles = () => {
@@ -248,9 +290,11 @@ export default function CodePad({ onExit }: Props) {
         rules.push(`
           ${S.head} {
             border-left-color: ${base} !important;
-            border-left-width: 2px !important;
+            border-left-width: 3px !important;
+            border-left-style: solid !important;
             z-index: 12 !important;
             position: relative !important;
+            animation: cursor-blink-${clientId} 1s ease-in-out infinite !important;
           }
           ${S.body} {
             background: ${light} !important;
@@ -258,23 +302,27 @@ export default function CodePad({ onExit }: Props) {
             z-index: 11 !important;
             position: relative !important;
             pointer-events: none !important;
+            border: 1px solid ${base}40 !important;
+          }
+          ${S.headLabel} {
+            background-color: ${base} !important;
+            color: #fff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            line-height: 1.5 !important;
+            padding: 2px 8px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,.3) !important;
+            z-index: 13 !important;
+            position: relative !important;
+          }
+          @keyframes cursor-blink-${clientId} {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.6; }
           }
         `);
       });
-      // 标签通用强化（背景由库设置，这里兜底）
-      rules.push(`
-        ${selFor(0).label} {
-          color: #fff !important;
-          font-size: 11px !important;
-          line-height: 1.4 !important;
-          padding: 1px 6px !important;
-          border-radius: 4px !important;
-          box-shadow: 0 1px 2px rgba(0,0,0,.25);
-          transform: translateY(-2px);
-          z-index: 13 !important;
-          position: relative !important;
-        }
-      `);
+
       styleEl!.textContent = rules.join("\n");
     };
     applyClientStyles();
@@ -334,7 +382,7 @@ export default function CodePad({ onExit }: Props) {
     ydocRef.current = doc;
     providerRef.current = provider;
     bindingRef.current = binding;
-  }, [run, clearOutput, applyOutputsFromY]);
+  }, [run, clearOutput, applyOutputsFromY, roomId]);
 
   // 卸载清理
   useEffect(() => {

@@ -61,9 +61,9 @@ localdev-restart-ws:
 
 localdev-seed-db:
 	@echo "Seeding the database with initial data"
+	$(DC) exec -T db psql -U donfra -d donfra_study -f /docker-entrypoint-initdb.d/000_seed_lessons.sql
 	$(DC) exec -T db psql -U donfra -d donfra_study -f /docker-entrypoint-initdb.d/001_create_users_table.sql;
-	$(DC) exec -T db psql -U donfra -d donfra_study -f /docker-entrypoint-initdb.d/002_seed_lessons.sql
-
+	$(DC) exec -T db psql -U donfra -d donfra_study -f /docker-entrypoint-initdb.d/002_create_interview_rooms.sql;
 localdev-up-db:
 	@echo "Starting DB container"
 	$(DC) up -d db
